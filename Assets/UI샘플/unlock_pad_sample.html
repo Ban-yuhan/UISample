@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>구역 해금 발판 샘플</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --tilt: 52deg;
+    --ink:#3b2418;
+    --cream:#fdf3e6;
+    --pill:#fbe0b5;
+    --fill:#86d12a;
+    --fillDark:#6cb81a;
+    --grassA:#cfe9a3;
+    --grassB:#c2e08e;
+    --lockA:#a9a59d;
+    --lockB:#9d9990;
+    --bg:#e9f4f7;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);font-family:'Noto Sans KR',system-ui,sans-serif;color:var(--ink);overflow-x:hidden}
+  .wrap{display:flex;flex-direction:column;align-items:center;padding:16px 16px 28px}
+  h1{font-size:18px;font-weight:900;margin:6px 0 2px}
+  .sub{font-size:13px;opacity:.65;margin-bottom:6px}
+
+  .stageBox{width:100%;max-width:900px;position:relative;overflow:hidden}
+  .stage{width:900px;height:600px;position:relative;transform-origin:top left}
+  .scene{position:absolute;inset:0;perspective:1400px;perspective-origin:50% 20%}
+  .scene.shake{animation:shake .45s}
+  @keyframes shake{
+    0%,100%{transform:translate(0,0)}20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}
+    60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}
+  }
+  .world{
+    position:absolute;left:50%;top:50%;width:792px;height:528px;margin:-300px 0 0 -396px;
+    transform-style:preserve-3d;transform:rotateX(var(--tilt));
+  }
+  .slab{position:absolute;left:0;top:528px;width:792px;height:26px;background:linear-gradient(#9a6a46,#7a4f31);
+    transform-origin:top center;transform:rotateX(-90deg);border-radius:0 0 6px 6px}
+
+  /* tiles */
+  .tile{position:absolute;width:88px;height:88px;background:var(--grassA);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.05);
+    transition:background-color .25s}
+  .tile.alt{background:var(--grassB)}
+  .tile.locked{background:var(--lockA)}
+  .tile.locked.alt{background:var(--lockB)}
+  .tile.pop{animation:pop .55s cubic-bezier(.3,1.6,.5,1) both}
+  @keyframes pop{0%{transform:translateZ(0)}35%{transform:translateZ(26px)}100%{transform:translateZ(0)}}
+
+  .lockZone{position:absolute;left:440px;top:0;width:352px;height:528px;transform:translateZ(1px);
+    border:4px dashed rgba(255,255,255,.75);border-radius:6px;
+    background:repeating-linear-gradient(45deg,rgba(0,0,0,.06) 0 14px,transparent 14px 28px);
+    transition:opacity .6s}
+  .lockZone.gone{opacity:0}
+
+  /* pads */
+  .pad{position:absolute;width:140px;height:140px;margin:-70px 0 0 -70px;
+    transform:translateZ(2px);border:5px solid var(--ink);border-radius:20px;background:var(--cream);
+    overflow:hidden;box-shadow:0 6px 0 rgba(59,36,24,.25)}
+  .pad .fill{position:absolute;left:0;right:0;bottom:0;height:0%;background:var(--fill)}
+  .pad .fill::after{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:rgba(255,255,255,.35)}
+  .pad .content{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 8px 10px}
+  .pad .icon{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+  .pad .label{font-size:15px;font-weight:900;line-height:1;margin-top:2px}
+  .pill{width:100%;height:34px;border-radius:17px;background:var(--pill);display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:22px;font-weight:900;letter-spacing:-.5px}
+  .pill svg{width:30px;height:22px}
+  .pad.active{animation:padGlow .6s ease-in-out infinite alternate}
+  @keyframes padGlow{from{box-shadow:0 6px 0 rgba(59,36,24,.25),0 0 0 0 rgba(255,255,255,.0)}to{box-shadow:0 6px 0 rgba(59,36,24,.25),0 0 0 8px rgba(255,255,255,.7)}}
+  .pad.done{animation:padDone .7s ease-in forwards}
+  @keyframes padDone{
+    0%{transform:translateZ(2px) scale(1)}
+    30%{transform:translateZ(14px) scale(1.14)}
+    100%{transform:translateZ(2px) scale(0);opacity:0}
+  }
+  .pad.level{transform:translateZ(2px) scale(.82);filter:saturate(.9)}
+
+  .ring{position:absolute;width:140px;height:140px;margin:-70px 0 0 -70px;border-radius:50%;
+    border:8px solid #fff;transform:translateZ(3px) scale(.2);opacity:0;pointer-events:none}
+  .ring.go{animation:ring .8s ease-out forwards}
+  @keyframes ring{0%{transform:translateZ(3px) scale(.2);opacity:1}100%{transform:translateZ(3px) scale(4.2);opacity:0}}
+
+  /* 3D anchors + billboards */
+  .anchor{position:absolute;width:0;height:0;transform-style:preserve-3d}
+  .bb{position:absolute;transform-style:preserve-3d;transform-origin:50% 100%;transform:rotateX(calc(-1 * var(--tilt)))}
+  .shadow{position:absolute;width:60px;height:22px;margin:-11px 0 0 -30px;border-radius:50%;
+    background:radial-gradient(rgba(0,0,0,.35),rgba(0,0,0,0) 70%);transform:translateZ(3px)}
+
+  /* arrow */
+  .arrowA{transition:opacity .3s}
+  .arrowA.hide{opacity:0}
+  .arrowA .bobber{transform-style:preserve-3d;animation:bob 1s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateZ(150px)}50%{transform:translateZ(95px)}}
+  .arrowA .bb{width:72px;height:82px;left:-36px;top:-82px}
+  .arrowA .spin{position:absolute;inset:0;transform-style:preserve-3d;animation:sway 2.4s ease-in-out infinite}
+  @keyframes sway{0%,100%{transform:rotateY(-38deg)}50%{transform:rotateY(38deg)}}
+  .arrowA .layer{position:absolute;inset:0}
+  .arrowA .layer svg{width:100%;height:100%;display:block;overflow:visible}
+  .arrowShadow{animation:shBob 1s ease-in-out infinite}
+  @keyframes shBob{0%,100%{transform:translateZ(3px) scale(.6);opacity:.55}50%{transform:translateZ(3px) scale(1);opacity:1}}
+
+  /* player */
+  .player{transition:left .9s cubic-bezier(.45,.05,.4,1),top .9s cubic-bezier(.45,.05,.4,1)}
+  .player .bb{width:56px;height:84px;left:-28px;top:-84px}
+  .player .body{width:100%;height:100%;animation:idle 1.2s ease-in-out infinite;transform-origin:50% 100%}
+  .player.walk .body{animation:walk .22s ease-in-out infinite}
+  @keyframes idle{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.96)}}
+  @keyframes walk{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-6px) rotate(4deg)}}
+
+  .lockBB .bb{width:70px;height:80px;left:-35px;top:-80px}
+  .lockBB{transition:opacity .4s}
+  .lockBB.gone{opacity:0}
+  .lockBB .floaty{transform-style:preserve-3d;animation:floaty 2s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translateZ(40px)}50%{transform:translateZ(52px)}}
+
+  .cash .bb{width:34px;height:24px;left:-17px;top:-24px}
+
+  /* HUD */
+  .hud{position:absolute;left:16px;top:14px;display:flex;align-items:center;gap:8px;background:#fff;border:4px solid var(--ink);
+    border-radius:22px;padding:4px 14px 4px 8px;font-weight:900;font-size:22px;box-shadow:0 4px 0 rgba(59,36,24,.2);z-index:5}
+  .hud svg{width:34px;height:24px}
+  .hud.tick{animation:tick .12s}
+  @keyframes tick{50%{transform:scale(1.06)}}
+  .toast{position:absolute;left:50%;top:70px;transform:translate(-50%,-20px) scale(.6);opacity:0;z-index:6;
+    background:var(--fill);color:#fff;border:5px solid var(--ink);border-radius:24px;padding:10px 26px;
+    font-size:28px;font-weight:900;text-shadow:0 3px 0 var(--ink);box-shadow:0 6px 0 rgba(59,36,24,.25);pointer-events:none;white-space:nowrap}
+  .toast.show{animation:toast 2.2s ease forwards}
+  @keyframes toast{0%{opacity:0;transform:translate(-50%,-20px) scale(.6)}12%{opacity:1;transform:translate(-50%,0) scale(1.08)}20%{transform:translate(-50%,0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-10px) scale(1)}}
+
+  .controls{display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+  button{font-family:inherit;font-weight:900;font-size:17px;padding:12px 26px;border-radius:16px;border:4px solid var(--ink);
+    cursor:pointer;box-shadow:0 5px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+  button:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--ink)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  #btnReset{background:#fff;color:var(--ink)}
+  #btnUnlock{background:var(--fill);color:#fff;text-shadow:0 2px 0 var(--ink)}
+  .modes{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .modes .label{font-size:13px;font-weight:800;opacity:.6;align-self:center;margin-right:2px}
+  button.mode{font-size:14px;padding:8px 14px;border-width:3px;border-radius:12px;box-shadow:0 3px 0 var(--ink);background:#fff;color:var(--ink)}
+  button.mode:active:not(:disabled){transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+  button.mode.on{background:#ffd23f}
+
+  /* 해금 연출용 필드 레이어 */
+  .field{position:absolute;top:0;height:528px;transform:translateZ(1.5px);
+    background-image:
+      linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px),
+      conic-gradient(var(--grassA) 0 25%, var(--grassB) 0 50%, var(--grassA) 0 75%, var(--grassB) 0);
+    background-size:88px 88px, 88px 88px, 176px 176px;background-repeat:repeat;background-position:0 0}
+  .field.edge{box-shadow:inset -8px 0 0 rgba(255,255,255,.85), 6px 0 18px rgba(255,255,255,.6)}
+  .field.backless{backface-visibility:hidden}
+  .status{margin-top:12px;font-size:14px;font-weight:700;opacity:.75;min-height:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>구역 해금 발판 · UI 샘플</h1>
+  <div class="sub">해제 가능한 발판에만 3D 화살표 표시 · 발판 위에 서 있으면 게이지 충전 → 구역 해금</div>
+
+  <div class="stageBox" id="stageBox">
+    <div class="stage" id="stage">
+      <div class="hud" id="hud"><span class="cashIco"></span><span id="money">350</span></div>
+      <div class="toast" id="toast">새 구역 해금!</div>
+      <div class="scene" id="scene">
+        <div class="world" id="world">
+          <div class="slab"></div>
+          <div class="lockZone" id="lockZone"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modes" id="modes">
+    <span class="label">해금 연출</span>
+    <button class="mode on" data-mode="wave">① 타일 파도</button>
+    <button class="mode" data-mode="expand">② 필드 확장</button>
+    <button class="mode" data-mode="radial">③ 원형 확산</button>
+    <button class="mode" data-mode="drop">④ 필드 낙하</button>
+    <button class="mode" data-mode="fold">⑤ 튕김 + 색 회복</button>
+  </div>
+  <div class="controls">
+    <button id="btnReset">초기화</button>
+    <button id="btnUnlock">해금 활성</button>
+  </div>
+  <div class="status" id="status">대기 중 · 화살표가 해제 가능한 발판을 가리키고 있어요</div>
+</div>
+
+<script>
+(() => {
+  const T = 88, COLS = 9, ROWS = 6, LOCK_COL = 5;
+  const PRICE = 200, START_MONEY = 350, FILL_MS = 2600;
+  const PAD = { x: LOCK_COL * T - 80, y: 3 * T };
+  const PLAYER_START = { x: 120, y: 360 };
+  const PLAYER_ON_PAD = { x: PAD.x, y: PAD.y + 34 };
+  const world = document.getElementById('world');
+
+  const CASH_SVG = `<svg viewBox="0 0 44 30"><g transform="rotate(-14 22 15)">
+    <rect x="5" y="11" width="34" height="14" rx="2.5" fill="#3e9a1b" stroke="#2a4710" stroke-width="2"/>
+    <rect x="5" y="6" width="34" height="14" rx="2.5" fill="#7fd632" stroke="#2a4710" stroke-width="2"/>
+    <circle cx="13" cy="13" r="3" fill="#56b324"/>
+    <rect x="20" y="6" width="6" height="14" fill="#f3df72" stroke="#2a4710" stroke-width="1.2"/>
+    <circle cx="32" cy="13" r="2" fill="#56b324"/></g></svg>`;
+  document.querySelector('.cashIco').innerHTML = CASH_SVG;
+
+  const EXPAND_SVG = `<svg viewBox="0 0 70 52" width="64" height="48" fill="none" stroke="#3b2418" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <g stroke-dasharray="4 5" stroke-width="3"><path d="M20 10H50M20 42H50M20 14V38M50 14V38"/></g>
+    <path d="M4 4L16 16M4 4H13M4 4V13"/><path d="M66 4L54 16M66 4H57M66 4V13"/>
+    <path d="M4 48L16 36M4 48H13M4 48V39"/><path d="M66 48L54 36M66 48H57M66 48V39"/></svg>`;
+  const LOCK_SVG = `<svg viewBox="0 0 64 70" width="58" height="64">
+    <path d="M16 32V22a16 16 0 0 1 32 0v10" fill="none" stroke="#3b2418" stroke-width="13" stroke-linecap="round"/>
+    <path d="M16 32V22a16 16 0 0 1 32 0v10" fill="none" stroke="#e9e6e1" stroke-width="6" stroke-linecap="round"/>
+    <rect x="6" y="30" width="52" height="36" rx="9" fill="#a9a6a2" stroke="#3b2418" stroke-width="4"/>
+    <rect x="10" y="34" width="44" height="7" rx="3" fill="#c4c1bd"/>
+    <circle cx="32" cy="47" r="5" fill="#3b2418"/><path d="M29 49h6l2 9h-10z" fill="#3b2418"/></svg>`;
+
+  // ---------- tiles ----------
+  const lockedTiles = [];
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const t = document.createElement('div');
+    t.className = 'tile' + ((r + c) % 2 ? ' alt' : '');
+    t.style.left = c * T + 'px'; t.style.top = r * T + 'px';
+    if (c >= LOCK_COL) {
+      t.classList.add('locked');
+      const cx = c * T + T / 2, cy = r * T + T / 2;
+      t.dataset.d = Math.hypot(cx - PAD.x, cy - PAD.y) / T;
+      lockedTiles.push(t);
+    }
+    world.insertBefore(t, world.firstChild.nextSibling);
+  }
+  const lockZone = document.getElementById('lockZone');
+  world.appendChild(lockZone);
+
+  // ---------- helpers ----------
+  const el = (cls, html='') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
+  const place = (node, x, y) => { node.style.left = x + 'px'; node.style.top = y + 'px'; };
+
+  // ---------- pads ----------
+  const levelPad = el('pad level', `<div class="content"><div class="icon">${LOCK_SVG}</div><div class="pill">8 레벨</div></div>`);
+  place(levelPad, 150, 120); levelPad.style.margin = '-70px 0 0 -70px';
+  world.appendChild(levelPad);
+
+  const pad = el('pad', `<div class="fill" id="fill"></div>
+    <div class="content"><div class="icon">${EXPAND_SVG}<div class="label">새 구역</div></div>
+    <div class="pill">${CASH_SVG}<span id="price">${PRICE}</span></div></div>`);
+  place(pad, PAD.x, PAD.y);
+  world.appendChild(pad);
+  const fillEl = pad.querySelector('#fill'), priceEl = pad.querySelector('#price');
+
+  const ring = el('ring'); place(ring, PAD.x, PAD.y); world.appendChild(ring);
+
+  // ---------- 3D arrow ----------
+  const arrowPath = 'M27 6 H45 V42 H64 L36 78 L8 42 H27 Z';
+  let layers = '';
+  const N = 10;
+  for (let i = N; i >= 0; i--) {
+    const front = i === 0;
+    const fill = front ? 'url(#ag)' : (i === N ? '#a85400' : '#d97200');
+    layers += `<div class="layer" style="transform:translateZ(${-i * 1.7}px)">
+      <svg viewBox="0 0 72 82"><defs><linearGradient id="ag" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe45c"/><stop offset=".55" stop-color="#ffb21f"/><stop offset="1" stop-color="#ff8a00"/></linearGradient></defs>
+      <path d="${arrowPath}" fill="${fill}" stroke="#3b2418" stroke-width="${front ? 4.5 : 4.5}" stroke-linejoin="round"/>
+      ${front ? '<path d="M31 11 H40 V44" fill="none" stroke="#fff6c2" stroke-width="4" stroke-linecap="round" opacity=".9"/>' : ''}
+      </svg></div>`;
+  }
+  const arrowShadow = el('shadow arrowShadow'); place(arrowShadow, PAD.x, PAD.y); world.appendChild(arrowShadow);
+  const arrow = el('anchor arrowA', `<div class="bobber"><div class="bb"><div class="spin">${layers}</div></div></div>`);
+  place(arrow, PAD.x, PAD.y); world.appendChild(arrow);
+
+  // ---------- lock billboard over locked zone ----------
+  const LOCK_CENTER = { x: LOCK_COL * T + 2 * T, y: 3 * T };
+  const lockBB = el('anchor lockBB', `<div class="floaty"><div class="bb">${LOCK_SVG.replace('width="58" height="64"','width="70" height="80"')}</div></div>`);
+  place(lockBB, LOCK_CENTER.x, LOCK_CENTER.y); world.appendChild(lockBB);
+
+  // ---------- player ----------
+  const PLAYER_SVG = `<svg viewBox="0 0 56 84" width="56" height="84">
+    <rect x="10" y="38" width="36" height="40" rx="15" fill="#4a90e2" stroke="#3b2418" stroke-width="4"/>
+    <rect x="14" y="56" width="28" height="7" rx="3" fill="#3a76c0"/>
+    <circle cx="28" cy="26" r="19" fill="#ffd9b3" stroke="#3b2418" stroke-width="4"/>
+    <path d="M10 22c3-13 33-15 36 0-8-5-27-6-36 0z" fill="#5a3a24" stroke="#3b2418" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="21" cy="28" r="3" fill="#3b2418"/><circle cx="35" cy="28" r="3" fill="#3b2418"/>
+    <circle cx="16" cy="34" r="3" fill="#ffaa9a" opacity=".7"/><circle cx="40" cy="34" r="3" fill="#ffaa9a" opacity=".7"/></svg>`;
+  const playerShadow = el('shadow'); playerShadow.style.transition = 'left .9s cubic-bezier(.45,.05,.4,1),top .9s cubic-bezier(.45,.05,.4,1)';
+  world.appendChild(playerShadow);
+  const player = el('anchor player', `<div class="bb"><div class="body">${PLAYER_SVG}</div></div>`);
+  world.appendChild(player);
+
+  // ---------- UI ----------
+  const moneyEl = document.getElementById('money'), hud = document.getElementById('hud');
+  const statusEl = document.getElementById('status'), toast = document.getElementById('toast');
+  const btnUnlock = document.getElementById('btnUnlock'), btnReset = document.getElementById('btnReset');
+  const scene = document.getElementById('scene');
+
+  let timers = [], raf = 0, cashTimer = 0, running = false;
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+
+  function setPlayer(p, instant) {
+    [player, playerShadow].forEach(n => {
+      if (instant) n.style.transition = 'none';
+      place(n, p.x, p.y);
+      if (instant) { void n.offsetWidth; n.style.transition = ''; }
+    });
+    if (instant) playerShadow.style.transition = 'left .9s cubic-bezier(.45,.05,.4,1),top .9s cubic-bezier(.45,.05,.4,1)';
+  }
+
+  function spawnCash() {
+    const c = el('anchor cash', `<div class="bb">${CASH_SVG}</div>`);
+    world.appendChild(c);
+    const fromX = PLAYER_ON_PAD.x + (Math.random() * 20 - 10), fromY = PLAYER_ON_PAD.y;
+    const toX = PAD.x + (Math.random() * 60 - 30), toY = PAD.y + (Math.random() * 40 - 30);
+    const a = c.animate([
+      { left: fromX + 'px', top: fromY + 'px', transform: 'translateZ(95px) scale(.6)', opacity: 1 },
+      { left: (fromX + toX) / 2 + 'px', top: (fromY + toY) / 2 + 'px', transform: 'translateZ(130px) scale(1)', opacity: 1, offset: .35 },
+      { left: toX + 'px', top: toY + 'px', transform: 'translateZ(6px) scale(.5)', opacity: 0 }
+    ], { duration: 520, easing: 'ease-in' });
+    a.onfinish = () => c.remove();
+  }
+
+  function reset() {
+    timers.forEach(clearTimeout); timers = [];
+    cancelAnimationFrame(raf); clearInterval(cashTimer);
+    document.querySelectorAll('.cash, .fx').forEach(n => n.remove());
+    scene.classList.remove('shake');
+    running = false;
+    fillEl.style.height = '0%'; priceEl.textContent = PRICE;
+    moneyEl.textContent = START_MONEY;
+    pad.className = 'pad'; void pad.offsetWidth;
+    ring.classList.remove('go');
+    arrow.classList.remove('hide'); arrowShadow.style.display = '';
+    lockZone.classList.remove('gone'); lockBB.classList.remove('gone');
+    lockedTiles.forEach(t => { t.classList.remove('pop'); t.classList.add('locked'); t.style.animationDelay = ''; });
+    toast.classList.remove('show');
+    player.classList.remove('walk');
+    setPlayer(PLAYER_START, true);
+    btnUnlock.disabled = false;
+    statusEl.textContent = '대기 중 · 화살표가 해제 가능한 발판을 가리키고 있어요';
+  }
+
+  function activate() {
+    if (running) return;
+    running = true; btnUnlock.disabled = true;
+    statusEl.textContent = '발판으로 이동 중…';
+    player.classList.add('walk');
+    setPlayer(PLAYER_ON_PAD);
+    later(() => {
+      player.classList.remove('walk');
+      arrow.classList.add('hide'); arrowShadow.style.display = 'none';
+      pad.classList.add('active');
+      statusEl.textContent = '발판 위에 서 있음 · 게이지 충전 중';
+      startFill();
+    }, 950);
+  }
+
+  function startFill() {
+    const t0 = performance.now();
+    let lastPrice = PRICE;
+    cashTimer = setInterval(spawnCash, 110);
+    const step = now => {
+      const p = Math.min(1, (now - t0) / FILL_MS);
+      const e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      fillEl.style.height = (e * 100) + '%';
+      const price = Math.ceil(PRICE * (1 - e));
+      if (price !== lastPrice) {
+        priceEl.textContent = price;
+        moneyEl.textContent = START_MONEY - (PRICE - price);
+        if ((PRICE - price) % 10 === 0) { hud.classList.remove('tick'); void hud.offsetWidth; hud.classList.add('tick'); }
+        lastPrice = price;
+      }
+      if (p < 1) raf = requestAnimationFrame(step);
+      else { clearInterval(cashTimer); unlock(); }
+    };
+    raf = requestAnimationFrame(step);
+  }
+
+  // ---------- 해금 연출 ----------
+  let mode = 'wave';
+  const REGION = { x: LOCK_COL * T, w: (COLS - LOCK_COL) * T, h: ROWS * T };
+  const shake = () => { scene.classList.remove('shake'); void scene.offsetWidth; scene.classList.add('shake'); };
+  function makeField(x, w, extra = '') {
+    const f = el('field fx ' + extra);
+    f.style.left = x + 'px'; f.style.width = w + 'px';
+    world.insertBefore(f, lockZone);
+    return f;
+  }
+  // 연출 종료 후 실제 타일을 해금 상태로 바꾸고 임시 레이어 제거
+  function finishSwap() {
+    lockedTiles.forEach(t => t.classList.remove('locked'));
+    requestAnimationFrame(() => document.querySelectorAll('.fx').forEach(n => n.remove()));
+  }
+
+  const MODES = {
+    // ① 타일 파도: 발판에서 가까운 타일부터 하나씩 튀어오르며 전환
+    wave() {
+      shake();
+      lockedTiles.forEach(t => {
+        const d = parseFloat(t.dataset.d) * 80;
+        later(() => { t.classList.remove('locked'); t.classList.add('pop'); }, d);
+      });
+      return 1100;
+    },
+    // ② 필드 확장: 기존 필드 한 덩어리가 오른쪽으로 쭉 늘어나며 사이즈 변경 (오버슈트)
+    expand() {
+      const f = makeField(REGION.x, 0, 'edge');
+      f.animate([
+        { width: '0px', transform: 'translateZ(1.5px)' },
+        { width: (REGION.w + 40) + 'px', transform: 'translateZ(8px)', offset: .62 },
+        { width: (REGION.w - 14) + 'px', transform: 'translateZ(3px)', offset: .82 },
+        { width: REGION.w + 'px', transform: 'translateZ(1.5px)' }
+      ], { duration: 950, easing: 'cubic-bezier(.25,.8,.35,1)', fill: 'forwards' });
+      later(() => f.classList.remove('edge'), 900);
+      later(shake, 560);
+      return 1050;
+    },
+    // ③ 원형 확산: 발판 중심에서 원이 퍼지며 새 필드가 드러남
+    radial() {
+      const f = makeField(REGION.x, REGION.w);
+      const cx = PAD.x - REGION.x, cy = PAD.y;
+      f.animate([
+        { clipPath: `circle(0px at ${cx}px ${cy}px)` },
+        { clipPath: `circle(${REGION.w + 420}px at ${cx}px ${cy}px)` }
+      ], { duration: 1100, easing: 'cubic-bezier(.3,.6,.3,1)', fill: 'forwards' });
+      // 퍼지는 테두리 링
+      const r = el('ring fx'); place(r, PAD.x, PAD.y); world.appendChild(r);
+      r.animate([
+        { transform: 'translateZ(4px) scale(.2)', opacity: 1, borderWidth: '10px' },
+        { transform: 'translateZ(4px) scale(6.5)', opacity: 0, borderWidth: '2px' }
+      ], { duration: 1100, easing: 'cubic-bezier(.3,.6,.3,1)', fill: 'forwards' });
+      return 1150;
+    },
+    // ④ 필드 낙하: 통짜 필드가 위에서 떨어져 쿵 하고 안착
+    drop() {
+      const f = makeField(REGION.x, REGION.w);
+      f.style.boxShadow = '0 0 0 4px rgba(255,255,255,.8)';
+      f.animate([
+        { transform: 'translateZ(340px)', opacity: 0, easing: 'cubic-bezier(.55,0,1,.45)' },
+        { transform: 'translateZ(0px)', opacity: 1, offset: .58, easing: 'ease-out' },
+        { transform: 'translateZ(22px)', offset: .76, easing: 'ease-in' },
+        { transform: 'translateZ(1.5px)', opacity: 1 }
+      ], { duration: 900, fill: 'forwards' });
+      later(shake, 520);
+      later(() => { f.style.boxShadow = ''; }, 900);
+      return 1000;
+    },
+    // ⑤ 튕김 + 색 회복: 구역 전체가 통통 튀듯 크기가 변하면서 회색 → 원래 색으로 돌아옴
+    fold() {
+      const f = makeField(REGION.x, REGION.w);
+      f.style.transformOrigin = '50% 50%';
+      f.style.filter = 'grayscale(1) brightness(.8)';
+      f.animate([
+        { transform: 'translateZ(1.5px) scale(1)' },
+        { transform: 'translateZ(1.5px) scale(.9)', offset: .22 },
+        { transform: 'translateZ(6px) scale(1.07)', offset: .5 },
+        { transform: 'translateZ(2px) scale(.97)', offset: .72 },
+        { transform: 'translateZ(1.5px) scale(1.01)', offset: .88 },
+        { transform: 'translateZ(1.5px) scale(1)' }
+      ], { duration: 850, easing: 'ease-in-out', fill: 'forwards' });
+      f.animate([
+        { filter: 'grayscale(1) brightness(.8)' },
+        { filter: 'grayscale(1) brightness(.8)', offset: .2 },
+        { filter: 'grayscale(0) brightness(1.15)', offset: .55 },
+        { filter: 'grayscale(0) brightness(1)' }
+      ], { duration: 850, easing: 'ease-out', fill: 'forwards' });
+      return 900;
+    }
+  };
+
+  function unlock() {
+    statusEl.textContent = '구역 해금!';
+    pad.classList.remove('active'); pad.classList.add('done');
+    later(() => {
+      ring.classList.remove('go'); void ring.offsetWidth; ring.classList.add('go');
+      lockBB.classList.add('gone');
+      lockZone.classList.add('gone');
+      const total = MODES[mode]();
+      if (mode !== 'wave') later(finishSwap, total);
+      later(() => { toast.classList.remove('show'); void toast.offsetWidth; toast.classList.add('show'); }, Math.min(total, 600));
+      later(() => { statusEl.textContent = '해금 완료 · 초기화를 눌러 다시 볼 수 있어요'; running = false; }, total + 200);
+    }, 260);
+  }
+
+  document.querySelectorAll('button.mode').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.mode;
+    document.querySelectorAll('button.mode').forEach(x => x.classList.toggle('on', x === b));
+    reset();
+  }));
+
+  btnUnlock.addEventListener('click', activate);
+  btnReset.addEventListener('click', reset);
+
+  // responsive fit
+  const stage = document.getElementById('stage'), box = document.getElementById('stageBox');
+  function fit() {
+    const s = Math.min(1, box.clientWidth / 900);
+    stage.style.transform = `scale(${s})`;
+    box.style.height = (600 * s) + 'px';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  reset();
+})();
+</script>
+</body>
+</html>

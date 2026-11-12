@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>적재 선반 · 상호작용 발판 · 인디케이터 테스트</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;800&family=Noto+Sans+KR:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: radial-gradient(circle at 50% 42%, #3a271a 0%, #22160e 100%);
+      overflow: hidden;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 인디케이터 수치 변경 시 강조 펄스 */
+    @keyframes popBadge {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.18); }
+      100% { transform: scale(1); }
+    }
+    .badge-pop {
+      animation: popBadge 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 플로팅 피드백 텍스트 (+1, -1, FULL) */
+    @keyframes floatUp {
+      0% { transform: translate(-50%, 0px) scale(0.85); opacity: 0; }
+      20% { transform: translate(-50%, -8px) scale(1.08); opacity: 1; }
+      100% { transform: translate(-50%, -34px) scale(0.95); opacity: 0; }
+    }
+    .float-feedback {
+      position: absolute;
+      pointer-events: none;
+      font-weight: 900;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+      animation: floatUp 0.95s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      z-index: 40;
+      white-space: nowrap;
+    }
+
+    /* 용량 초과 경고 시 화면 진동 & 붉은 경고 플래시 */
+    @keyframes screenShake {
+      0%, 100% { transform: translate(0, 0); }
+      18% { transform: translate(-7px, 3px); }
+      36% { transform: translate(7px, -3px); }
+      54% { transform: translate(-5px, -2px); }
+      72% { transform: translate(5px, 2px); }
+      90% { transform: translate(-2px, 1px); }
+    }
+    .shake-screen {
+      animation: screenShake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    }
+
+    @keyframes fullPulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.65), 0 12px 28px rgba(0, 0, 0, 0.65); }
+      50% { box-shadow: 0 0 0 6px rgba(244, 63, 94, 0), 0 12px 28px rgba(244, 63, 94, 0.45); }
+    }
+    .full-indicator-pulse {
+      animation: fullPulseGlow 1.1s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="w-screen h-screen flex flex-col">
+
+  <!-- 메인 아이소메트릭 선반 테스트 뷰포트 -->
+  <main id="viewport-stage" class="relative flex-1 w-full h-full overflow-hidden">
+    <canvas id="shelf-canvas" class="w-full h-full block"></canvas>
+
+    <!-- 가득 참 경고 붉은 비네팅 플래시 오버레이 -->
+    <div id="full-warning-flash"
+      class="absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-200 z-20"
+      style="background: radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.12) 25%, rgba(225, 29, 72, 0.52) 100%); box-shadow: inset 0 0 55px rgba(244, 63, 94, 0.85);">
+    </div>
+
+    <!-- 월드 스페이스 UI (선반 상단 품목·용량 인디케이터 & 바닥 발판 시계/바 게이지) -->
+    <div id="world-ui-overlay" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- 하단 테스트 조작 컨트롤 바 (택배 넣기 / 빼기 / 품목 변경 / 발판 테스트) -->
+    <div class="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-[94vw] max-w-xl">
+      <div class="bg-[#2c1d13]/95 backdrop-blur border-2 border-[#7c5638]/80 rounded-2xl p-3.5 shadow-2xl flex flex-col gap-2.5">
+        
+        <div class="flex items-center justify-between text-xs text-amber-200/80 px-1">
+          <span class="font-bold">📦 적재 선반 인디케이터 테스트 패널</span>
+          <span id="panel-status-text" class="font-mono-num text-amber-300 font-bold">현재 5 / 9 칸 적재됨</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <!-- 택배 넣기 (+1) -->
+          <button onclick="changeBoxCount(1)"
+            class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-1">
+            <span>+ 택배 넣기</span>
+          </button>
+
+          <!-- 택배 빼기 (-1) -->
+          <button onclick="changeBoxCount(-1)"
+            class="py-2.5 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-1">
+            <span>- 택배 빼기</span>
+          </button>
+
+          <!-- 품목 변경 -->
+          <button onclick="cycleItemType()"
+            class="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 active:scale-95 text-white font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-1">
+            <span>↻ 품목 변경</span>
+          </button>
+
+          <!-- 발판 상호작용 시뮬레이션 (클릭 시 1회 작업 진행, 꾹 누르면 연속 작업) -->
+          <button
+            onmousedown="startPadWork()" onmouseup="stopPadWork()" onmouseleave="stopPadWork()"
+            ontouchstart="startPadWork(event)" ontouchend="stopPadWork()"
+            class="py-2.5 px-3 rounded-xl bg-[#4d3320] hover:bg-[#63422a] border border-amber-400/40 active:scale-95 text-amber-100 font-black text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-1">
+            <span>🦶 발판 밟기</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <script>
+    /* =================================================================
+       1. 선반 및 품목 상태 데이터 (단일 선반 집중 테스트)
+       ================================================================= */
+    const ITEM_TYPES = [
+      {
+        id: 'normal',
+        name: '일반 택배',
+        icon: '📦',
+        badgeBg: 'bg-amber-500/20 text-amber-300 border-amber-400/50',
+        boxTop: '#f0c68d',
+        boxLeft: '#d49a57',
+        boxRight: '#b07838',
+        tapeColor: '#fae3be'
+      },
+      {
+        id: 'fragile',
+        name: '파손주의 화물',
+        icon: '🍷',
+        badgeBg: 'bg-rose-500/20 text-rose-300 border-rose-400/50',
+        boxTop: '#fda4af',
+        boxLeft: '#f43f5e',
+        boxRight: '#be123c',
+        tapeColor: '#ffe4e6'
+      },
+      {
+        id: 'cold',
+        name: '냉장·신선식품',
+        icon: '❄️',
+        badgeBg: 'bg-sky-500/20 text-sky-300 border-sky-400/50',
+        boxTop: '#bae6fd',
+        boxLeft: '#38bdf8',
+        boxRight: '#0284c7',
+        tapeColor: '#f0f9ff'
+      },
+      {
+        id: 'eco',
+        name: '친환경 물품',
+        icon: '🌿',
+        badgeBg: 'bg-lime-500/20 text-lime-300 border-lime-400/50',
+        boxTop: '#bef264',
+        boxLeft: '#84cc16',
+        boxRight: '#4d7c0f',
+        tapeColor: '#ecfccb'
+      }
+    ];
+
+    const shelfState = {
+      itemIndex: 0,
+      currentCount: 5,
+      maxCount: 9,        // 3단 x 3칸 = 총 9슬롯
+      padPulseTime: 0,    // 발판 완료 플래시 연출 타이머
+      padActive: false,   // 발판 위에 올라가 작업 진행 중 여부
+      padElapsed: 0,      // 현재 작업 경과 시간 (초)
+      padDuration: 1.2,   // 한 작업에 걸리는 총 시간 (초)
+      warnFlashTime: 0    // 가득 참 경고 붉은 테두리 타이머
+    };
+
+    const canvas = document.getElementById('shelf-canvas');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('world-ui-overlay');
+
+    let viewW = window.innerWidth;
+    let viewH = window.innerHeight;
+
+    function resizeCanvas() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      viewW = window.innerWidth;
+      viewH = window.innerHeight;
+      canvas.width = viewW * dpr;
+      canvas.height = viewH * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    /* =================================================================
+       2. 아이소메트릭 투영 및 3D 프리즘 그리기 유틸리티
+       ================================================================= */
+    const ISO_ANGLE = Math.PI / 6; // 30도
+    const COS_A = Math.cos(ISO_ANGLE);
+    const SIN_A = Math.sin(ISO_ANGLE);
+
+    function toIso(x, y, z, originX, originY) {
+      return {
+        x: originX + (x - y) * COS_A,
+        y: originY + (x + y) * SIN_A - z
+      };
+    }
+
+    function drawIsoPrism(cx, cy, cz, dx, dy, dz, colors, originX, originY) {
+      const hx = dx / 2;
+      const hy = dy / 2;
+
+      const p001 = toIso(cx - hx, cy - hy, cz + dz, originX, originY); // 상단 뒤
+      const p101 = toIso(cx + hx, cy - hy, cz + dz, originX, originY); // 상단 우
+      const p111 = toIso(cx + hx, cy + hy, cz + dz, originX, originY); // 상단 앞
+      const p011 = toIso(cx - hx, cy + hy, cz + dz, originX, originY); // 상단 좌
+
+      const p100 = toIso(cx + hx, cy - hy, cz, originX, originY);      // 하단 우
+      const p110 = toIso(cx + hx, cy + hy, cz, originX, originY);      // 하단 앞
+      const p010 = toIso(cx - hx, cy + hy, cz, originX, originY);      // 하단 좌
+
+      // 윗면
+      ctx.beginPath();
+      ctx.moveTo(p001.x, p001.y);
+      ctx.lineTo(p101.x, p101.y);
+      ctx.lineTo(p111.x, p111.y);
+      ctx.lineTo(p011.x, p011.y);
+      ctx.closePath();
+      ctx.fillStyle = colors.top;
+      ctx.fill();
+      if (colors.stroke) {
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // 왼쪽 앞면 (y = +hy)
+      ctx.beginPath();
+      ctx.moveTo(p011.x, p011.y);
+      ctx.lineTo(p111.x, p111.y);
+      ctx.lineTo(p110.x, p110.y);
+      ctx.lineTo(p010.x, p010.y);
+      ctx.closePath();
+      ctx.fillStyle = colors.left;
+      ctx.fill();
+      if (colors.stroke) {
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // 오른쪽 앞면 (x = +hx)
+      ctx.beginPath();
+      ctx.moveTo(p111.x, p111.y);
+      ctx.lineTo(p101.x, p101.y);
+      ctx.lineTo(p100.x, p100.y);
+      ctx.lineTo(p110.x, p110.y);
+      ctx.closePath();
+      ctx.fillStyle = colors.right;
+      ctx.fill();
+      if (colors.stroke) {
+        ctx.strokeStyle = colors.stroke;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    function drawCargoBox(cx, cy, cz, size, item, originX, originY) {
+      drawIsoPrism(
+        cx, cy, cz,
+        size, size, size * 0.88,
+        {
+          top: item.boxTop,
+          left: item.boxLeft,
+          right: item.boxRight,
+          stroke: 'rgba(40, 22, 10, 0.35)'
+        },
+        originX, originY
+      );
+
+      // 상자 윗면 포장 테이프 라인
+      const t1 = toIso(cx - size * 0.45, cy, cz + size * 0.88 + 0.3, originX, originY);
+      const t2 = toIso(cx + size * 0.45, cy, cz + size * 0.88 + 0.3, originX, originY);
+      ctx.beginPath();
+      ctx.moveTo(t1.x, t1.y);
+      ctx.lineTo(t2.x, t2.y);
+      ctx.strokeStyle = item.tapeColor;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    /* =================================================================
+       3. 단일 선반 + 바닥 발판 씬 렌더링 (Z-Order 깊이 정렬 완비)
+       ================================================================= */
+    function renderScene(timeSec) {
+      ctx.clearRect(0, 0, viewW, viewH);
+
+      const originX = viewW * 0.5;
+      const originY = viewH * 0.54;
+
+      // 1. 물류센터 바닥 타일 및 안전 구역 라인
+      const floorSize = 230;
+      const f0 = toIso(-floorSize, -floorSize, 0, originX, originY);
+      const f1 = toIso(floorSize, -floorSize, 0, originX, originY);
+      const f2 = toIso(floorSize, floorSize, 0, originX, originY);
+      const f3 = toIso(-floorSize, floorSize, 0, originX, originY);
+
+      ctx.beginPath();
+      ctx.moveTo(f0.x, f0.y);
+      ctx.lineTo(f1.x, f1.y);
+      ctx.lineTo(f2.x, f2.y);
+      ctx.lineTo(f3.x, f3.y);
+      ctx.closePath();
+      ctx.fillStyle = '#4a3525';
+      ctx.fill();
+      ctx.strokeStyle = '#6e5039';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 바닥 격자선
+      ctx.strokeStyle = 'rgba(255, 225, 190, 0.06)';
+      ctx.lineWidth = 1;
+      for (let g = -180; g <= 180; g += 45) {
+        const a1 = toIso(g, -floorSize, 0, originX, originY);
+        const a2 = toIso(g, floorSize, 0, originX, originY);
+        ctx.beginPath();
+        ctx.moveTo(a1.x, a1.y);
+        ctx.lineTo(a2.x, a2.y);
+        ctx.stroke();
+
+        const b1 = toIso(-floorSize, g, 0, originX, originY);
+        const b2 = toIso(floorSize, g, 0, originX, originY);
+        ctx.beginPath();
+        ctx.moveTo(b1.x, b1.y);
+        ctx.lineTo(b2.x, b2.y);
+        ctx.stroke();
+      }
+
+      // 2. 바닥 상호작용 발판 (선반 앞쪽 y = +92 위치)
+      const padX = 0;
+      const padY = 92;
+      const pulse = Math.sin(timeSec * 4) * 0.5 + 0.5;
+      const workRatio = shelfState.padActive ? Math.min(1, shelfState.padElapsed / shelfState.padDuration) : 0;
+      const isFull = shelfState.currentCount >= shelfState.maxCount;
+      const isWarn = shelfState.warnFlashTime > 0;
+      const activeBoost = (shelfState.padPulseTime > 0 || shelfState.padActive) ? 1 : 0;
+
+      // 발판 외곽 글로우 링
+      const padCorners = [
+        toIso(padX - 46 - pulse * 3, padY - 28 - pulse * 2, 0.5, originX, originY),
+        toIso(padX + 46 + pulse * 3, padY - 28 - pulse * 2, 0.5, originX, originY),
+        toIso(padX + 46 + pulse * 3, padY + 28 + pulse * 2, 0.5, originX, originY),
+        toIso(padX - 46 - pulse * 3, padY + 28 + pulse * 2, 0.5, originX, originY)
+      ];
+      ctx.beginPath();
+      ctx.moveTo(padCorners[0].x, padCorners[0].y);
+      padCorners.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+      ctx.closePath();
+      ctx.fillStyle = isWarn
+        ? 'rgba(244, 63, 94, 0.42)'
+        : (activeBoost ? 'rgba(52, 211, 153, 0.35)' : (isFull ? `rgba(244, 63, 94, ${0.18 + pulse * 0.14})` : `rgba(245, 158, 11, ${0.14 + pulse * 0.1})`));
+      ctx.fill();
+      ctx.lineWidth = isWarn ? 3.2 : 2.2;
+      ctx.strokeStyle = (isWarn || isFull) ? '#f43f5e' : (activeBoost ? '#10b981' : '#f59e0b');
+      ctx.stroke();
+
+      // 발판 내부 패드
+      const innerCorners = [
+        toIso(padX - 38, padY - 22, 1, originX, originY),
+        toIso(padX + 38, padY - 22, 1, originX, originY),
+        toIso(padX + 38, padY + 22, 1, originX, originY),
+        toIso(padX - 38, padY + 22, 1, originX, originY)
+      ];
+      ctx.beginPath();
+      ctx.moveTo(innerCorners[0].x, innerCorners[0].y);
+      innerCorners.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+      ctx.closePath();
+      ctx.fillStyle = isWarn
+        ? 'rgba(225, 29, 72, 0.5)'
+        : (activeBoost ? 'rgba(16, 185, 129, 0.45)' : (isFull ? 'rgba(244, 63, 94, 0.25)' : 'rgba(251, 191, 36, 0.25)'));
+      ctx.fill();
+
+      // 발판 위 작업 진행도(바닥 채움) 오버레이
+      if (workRatio > 0) {
+        const fillSpan = -38 + 76 * workRatio;
+        const progCorners = [
+          toIso(padX - 38, padY - 22, 1.4, originX, originY),
+          toIso(padX + fillSpan, padY - 22, 1.4, originX, originY),
+          toIso(padX + fillSpan, padY + 22, 1.4, originX, originY),
+          toIso(padX - 38, padY + 22, 1.4, originX, originY)
+        ];
+        ctx.beginPath();
+        ctx.moveTo(progCorners[0].x, progCorners[0].y);
+        progCorners.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(52, 211, 153, 0.55)';
+        ctx.fill();
+      }
+
+      // 3. 적재 선반 위치 표시 바닥 그리드 테두리 (선반 본체보다 먼저 그려 선반 위로 뜨지 않도록 처리)
+      const rackY = -20;
+      const rackW = 138;
+      const rackD = 54;
+      const fullRing = [
+        toIso(-rackW / 2 - 8, rackY - rackD / 2 - 8, 0.5, originX, originY),
+        toIso(rackW / 2 + 8, rackY - rackD / 2 - 8, 0.5, originX, originY),
+        toIso(rackW / 2 + 8, rackY + rackD / 2 + 8, 0.5, originX, originY),
+        toIso(-rackW / 2 - 8, rackY + rackD / 2 + 8, 0.5, originX, originY)
+      ];
+      ctx.beginPath();
+      ctx.moveTo(fullRing[0].x, fullRing[0].y);
+      fullRing.slice(1).forEach(pt => ctx.lineTo(pt.x, pt.y));
+      ctx.closePath();
+      if (isFull) {
+        ctx.fillStyle = `rgba(244, 63, 94, ${0.14 + pulse * 0.12})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(244, 63, 94, ${0.65 + pulse * 0.35})`;
+        ctx.lineWidth = isWarn ? 3.5 : 2.2;
+      } else {
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.32)';
+        ctx.lineWidth = 1.5;
+      }
+      ctx.stroke();
+
+      // 4. 적재 선반 1개 렌더링 (뒷기둥 -> 팔레트 -> 층별 선반판 & 박스 -> 앞기둥 순서로 깨짐 방지)
+      const postH = 148;
+      const postColors = { top: '#78716c', left: '#57534e', right: '#44403c', stroke: '#292524' };
+
+      // [A] 뒤쪽 기둥 2개 (y = rackY - rackD/2)
+      drawIsoPrism(-rackW / 2 + 4, rackY - rackD / 2 + 4, 0, 7, 7, postH, postColors, originX, originY);
+      drawIsoPrism(rackW / 2 - 4, rackY - rackD / 2 + 4, 0, 7, 7, postH, postColors, originX, originY);
+
+      // [B] 바닥 나무 팔레트
+      drawIsoPrism(
+        0, rackY, 0,
+        rackW, rackD, 7,
+        { top: '#b07d4f', left: '#8c5e35', right: '#6e4724', stroke: '#3d2511' },
+        originX, originY
+      );
+
+      // [C] 3단 선반판 및 각 단에 놓인 택배 박스 (1단 -> 2단 -> 3단 순서)
+      const tierHeights = [7, 54, 101];
+      const slotOffsetsX = [-42, 0, 42];
+      const currentItem = ITEM_TYPES[shelfState.itemIndex];
+      let drawnBoxes = 0;
+
+      tierHeights.forEach((tierZ, tierIdx) => {
+        // 선반 철제 플레이트 (2단, 3단)
+        if (tierIdx > 0) {
+          drawIsoPrism(
+            0, rackY, tierZ - 4,
+            rackW - 2, rackD - 2, 4,
+            { top: '#94a3b8', left: '#64748b', right: '#475569', stroke: '#334155' },
+            originX, originY
+          );
+        }
+
+        // 해당 층의 3칸 슬롯(좌 -> 중 -> 우 순서로 그려 앞쪽 박스가 뒤쪽 박스를 자연스럽게 가림)
+        slotOffsetsX.forEach((sx) => {
+          if (drawnBoxes < shelfState.currentCount) {
+            drawCargoBox(sx, rackY, tierZ, 32, currentItem, originX, originY);
+            drawnBoxes++;
+          } else {
+            // 빈 슬롯 가이드 점선 표시
+            const g0 = toIso(sx - 13, rackY - 13, tierZ + 0.5, originX, originY);
+            const g1 = toIso(sx + 13, rackY - 13, tierZ + 0.5, originX, originY);
+            const g2 = toIso(sx + 13, rackY + 13, tierZ + 0.5, originX, originY);
+            const g3 = toIso(sx - 13, rackY + 13, tierZ + 0.5, originX, originY);
+            ctx.beginPath();
+            ctx.moveTo(g0.x, g0.y);
+            ctx.lineTo(g1.x, g1.y);
+            ctx.lineTo(g2.x, g2.y);
+            ctx.lineTo(g3.x, g3.y);
+            ctx.closePath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
+      });
+
+      // [D] 최상단 마감 프레임 & 앞쪽 기둥 2개 (가장 마지막에 그려 모든 박스 앞쪽에 위치)
+      drawIsoPrism(
+        0, rackY, postH - 4,
+        rackW, rackD, 4,
+        { top: '#a8a29e', left: '#78716c', right: '#57534e', stroke: '#292524' },
+        originX, originY
+      );
+      drawIsoPrism(-rackW / 2 + 4, rackY + rackD / 2 - 4, 0, 7, 7, postH, postColors, originX, originY);
+      drawIsoPrism(rackW / 2 - 4, rackY + rackD / 2 - 4, 0, 7, 7, postH, postColors, originX, originY);
+
+      // 5. 월드 스페이스 UI 위치 갱신
+      updateWorldUI(originX, originY, rackY, postH, padX, padY);
+    }
+
+    /* =================================================================
+       4. 월드 스페이스 UI (선반 상단 인디케이터 & 발판 시계/바 게이지)
+       ================================================================= */
+    function updateWorldUI(originX, originY, rackY, postH, padX, padY) {
+      const item = ITEM_TYPES[shelfState.itemIndex];
+      const topAnchor = toIso(0, rackY, postH + 16, originX, originY);
+      const padAnchor = toIso(padX, padY + 34, 0, originX, originY);
+
+      const pct = Math.round((shelfState.currentCount / shelfState.maxCount) * 100);
+      const isFull = shelfState.currentCount >= shelfState.maxCount;
+      const isEmpty = shelfState.currentCount === 0;
+
+      const barColor = isFull
+        ? 'bg-gradient-to-r from-rose-600 to-red-400'
+        : (pct >= 70 ? 'bg-amber-400' : 'bg-emerald-400');
+
+      const statusLabel = isFull ? 'FULL · 포화' : (isEmpty ? 'EMPTY' : `${pct}%`);
+      const statusBadgeClass = isFull
+        ? 'bg-rose-600 text-white border-rose-300 animate-pulse'
+        : item.badgeBg;
+      const statusTextColor = isFull ? 'text-rose-300' : (isEmpty ? 'text-stone-400' : 'text-emerald-300');
+
+      // 발판 작업 시간 게이지 계산
+      const workRatio = shelfState.padActive
+        ? Math.min(1, shelfState.padElapsed / shelfState.padDuration)
+        : 0;
+      const workPct = Math.round(workRatio * 100);
+      const remainSec = Math.max(0, shelfState.padDuration - shelfState.padElapsed).toFixed(1);
+
+      overlay.innerHTML = `
+        <!-- A. 선반 상단 품목 · 용량 인디케이터 -->
+        <div style="left:${topAnchor.x}px; top:${topAnchor.y}px;"
+          class="absolute -translate-x-1/2 -translate-y-full flex flex-col items-center">
+          <div id="shelf-indicator-card"
+            class="${isFull ? 'bg-[#361118]/95 border-rose-500 full-indicator-pulse' : 'bg-[#26180f]/95 border-[#b8895a]'} backdrop-blur-md border-2 rounded-2xl px-3.5 py-2.5 shadow-2xl min-w-[186px] transition-colors">
+            
+            <!-- 상단: 품목 아이콘 + 품목명 -->
+            <div class="flex items-center justify-between gap-2.5">
+              <div class="flex items-center gap-1.5">
+                <span class="text-lg leading-none">${item.icon}</span>
+                <span class="text-xs sm:text-sm font-black text-amber-50 tracking-tight">${item.name}</span>
+              </div>
+              <span class="text-[10px] font-mono-num font-extrabold px-1.5 py-0.5 rounded border ${statusBadgeClass}">
+                ${statusLabel}
+              </span>
+            </div>
+
+            <!-- 하단: 용량 바 + 수치 (현재 / 최대) -->
+            <div class="mt-2">
+              <div class="flex items-center justify-between text-[11px] font-mono-num font-extrabold mb-1">
+                <span class="${isFull ? 'text-rose-200' : 'text-amber-200/70'}">${isFull ? '⚠️ 적재 불가 (가득 참)' : '적재 용량'}</span>
+                <span class="${statusTextColor}">${shelfState.currentCount} / ${shelfState.maxCount}</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full bg-[#120b06] border ${isFull ? 'border-rose-500/80' : 'border-[#5c3f28]'} p-0.5 overflow-hidden">
+                <div class="h-full ${barColor} rounded-full transition-all duration-200" style="width:${pct}%"></div>
+              </div>
+            </div>
+          </div>
+          <!-- 선반 중앙을 가리키는 삼각형 꼬리 -->
+          <div class="w-3 h-3 ${isFull ? 'bg-[#361118] border-rose-500' : 'bg-[#26180f] border-[#b8895a]'} border-r-2 border-b-2 rotate-45 -mt-1.5"></div>
+        </div>
+
+        <!-- B. 바닥 상호작용 발판 월드 UI (시계 아이콘 + 소요 시간 바 게이지) -->
+        <div style="left:${padAnchor.x}px; top:${padAnchor.y}px;"
+          onmousedown="startPadWork()" onmouseup="stopPadWork()" onmouseleave="stopPadWork()"
+          ontouchstart="startPadWork(event)" ontouchend="stopPadWork()"
+          class="pointer-events-auto cursor-pointer absolute -translate-x-1/2 flex flex-col items-center">
+          
+          ${shelfState.padActive ? `
+            <!-- 발판 위에 올라갔을 때 나타나는 작업 시간 시계·바 게이지 -->
+            <div class="mb-1.5 bg-[#23150c]/95 backdrop-blur-md border-2 border-emerald-400 rounded-xl px-3 py-1.5 shadow-xl min-w-[156px]">
+              <div class="flex items-center justify-between gap-2 text-[10px] font-extrabold mb-1">
+                <span class="text-emerald-300 flex items-center gap-1">
+                  <span class="inline-block animate-spin" style="animation-duration: 1.2s;">⏱️</span>
+                  <span>택배 적재 중</span>
+                </span>
+                <span class="font-mono-num text-amber-200">${remainSec}s / ${shelfState.padDuration.toFixed(1)}s</span>
+              </div>
+              <div class="w-full h-2.5 rounded-full bg-[#120a05] border border-emerald-800/80 p-0.5 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full" style="width:${workPct}%"></div>
+              </div>
+            </div>
+          ` : `
+            <!-- 대기 상태 안내 배지 (가득 찼을 때 붉은 불가 표시, 평소엔 1회 작업 시간 표시) -->
+            <div class="px-3 py-1 rounded-full ${isFull ? 'bg-[#3b1219]/95 border-rose-500 text-rose-200' : (shelfState.padPulseTime > 0 ? 'bg-[#26180f]/92 border-emerald-400 text-emerald-200' : 'bg-[#26180f]/92 border-amber-500/70 text-amber-200')} border shadow-lg text-[11px] font-black flex items-center gap-1.5 transition hover:scale-105">
+              <span>${isFull ? '🚫 용량 초과 (FULL)' : '🦶 상호작용 발판'}</span>
+              <span class="text-[10px] font-mono-num ${isFull ? 'text-rose-300' : 'text-amber-400'}">[⏱️ ${shelfState.padDuration.toFixed(1)}s]</span>
+            </div>
+          `}
+        </div>
+      `;
+    }
+
+    /* =================================================================
+       5. 버튼 테스트 인터랙션 함수 & 가득 참 경고 연출
+       ================================================================= */
+    let warnFlashTimer = null;
+
+    function triggerFullCapacityWarning(message = '⚠️ 선반 용량이 가득 찼습니다! (9/9 FULL)') {
+      shelfState.warnFlashTime = 0.45;
+      spawnFeedback(message, 'text-rose-400');
+
+      // 화면 흔들림 (Shake)
+      const stage = document.getElementById('viewport-stage');
+      if (stage) {
+        stage.classList.remove('shake-screen');
+        void stage.offsetWidth;
+        stage.classList.add('shake-screen');
+      }
+
+      // 화면 붉은 경고 플래시
+      const flash = document.getElementById('full-warning-flash');
+      if (flash) {
+        flash.style.opacity = '1';
+        clearTimeout(warnFlashTimer);
+        warnFlashTimer = setTimeout(() => {
+          flash.style.opacity = '0';
+        }, 260);
+      }
+    }
+
+    function spawnFeedback(text, colorClass) {
+      const originX = viewW * 0.5;
+      const originY = viewH * 0.54;
+      const pos = toIso(0, -20, 175, originX, originY);
+
+      const el = document.createElement('div');
+      el.className = `float-feedback text-sm sm:text-base ${colorClass}`;
+      el.style.left = `${pos.x}px`;
+      el.style.top = `${pos.y}px`;
+      el.innerText = text;
+      overlay.appendChild(el);
+      setTimeout(() => el.remove(), 950);
+    }
+
+    function syncStatusText() {
+      const statusEl = document.getElementById('panel-status-text');
+      if (statusEl) {
+        const isFull = shelfState.currentCount >= shelfState.maxCount;
+        statusEl.className = isFull
+          ? 'font-mono-num text-rose-400 font-black'
+          : 'font-mono-num text-amber-300 font-bold';
+        statusEl.innerText = isFull
+          ? `⚠️ 적재 가득 참 (${shelfState.currentCount} / ${shelfState.maxCount} FULL)`
+          : `현재 ${shelfState.currentCount} / ${shelfState.maxCount} 칸 적재됨`;
+      }
+    }
+
+    function changeBoxCount(delta) {
+      const next = shelfState.currentCount + delta;
+      if (next > shelfState.maxCount) {
+        triggerFullCapacityWarning('🚫 더 이상 적재할 수 없습니다! (FULL)');
+        return;
+      }
+      if (next < 0) {
+        spawnFeedback('선반이 비어있습니다!', 'text-stone-300');
+        return;
+      }
+
+      shelfState.currentCount = next;
+      syncStatusText();
+
+      if (delta > 0) {
+        if (shelfState.currentCount >= shelfState.maxCount) {
+          spawnFeedback('⚠️ 마지막 칸 적재! (9/9 FULL)', 'text-rose-300');
+        } else {
+          spawnFeedback('+1 적재 완료', 'text-emerald-300');
+        }
+      } else {
+        spawnFeedback('-1 반출 완료', 'text-rose-300');
+      }
+    }
+
+    function cycleItemType() {
+      shelfState.itemIndex = (shelfState.itemIndex + 1) % ITEM_TYPES.length;
+      const item = ITEM_TYPES[shelfState.itemIndex];
+      spawnFeedback(`품목 전환: ${item.icon} ${item.name}`, 'text-amber-300');
+    }
+
+    let padHoldContinuous = false;
+
+    function startPadWork(e) {
+      if (e) e.preventDefault();
+      // 이미 가득 찬 상태에서 발판을 밟으면 즉시 붉은 경고 + 화면 진동 발생
+      if (shelfState.currentCount >= shelfState.maxCount) {
+        padHoldContinuous = false;
+        shelfState.padActive = false;
+        shelfState.padElapsed = 0;
+        triggerFullCapacityWarning('🚫 선반 가득 참! 발판 작업 불가');
+        return;
+      }
+
+      padHoldContinuous = true;
+      if (!shelfState.padActive) {
+        shelfState.padActive = true;
+        shelfState.padElapsed = 0;
+      }
+    }
+
+    function stopPadWork() {
+      // 짧게 클릭한 경우에도 최소 1회 작업은 끝까지 완료되도록 유지하고, 꾹 누르기 연속 모드만 해제
+      padHoldContinuous = false;
+    }
+
+    function completePadAction() {
+      shelfState.padPulseTime = 0.55;
+      if (shelfState.currentCount < shelfState.maxCount) {
+        changeBoxCount(1);
+      }
+
+      // 방금 1개를 넣어 가득 찼거나 연속 홀드 중이라면 상태 정리
+      if (shelfState.currentCount >= shelfState.maxCount) {
+        padHoldContinuous = false;
+        shelfState.padActive = false;
+        shelfState.padElapsed = 0;
+      } else if (padHoldContinuous) {
+        shelfState.padElapsed = 0;
+      } else {
+        shelfState.padActive = false;
+        shelfState.padElapsed = 0;
+      }
+    }
+
+    /* =================================================================
+       6. 메인 애니메이션 루프
+       ================================================================= */
+    let lastTs = 0;
+    function loop(ts) {
+      const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0.016);
+      lastTs = ts;
+
+      if (shelfState.padPulseTime > 0) {
+        shelfState.padPulseTime = Math.max(0, shelfState.padPulseTime - dt);
+      }
+      if (shelfState.warnFlashTime > 0) {
+        shelfState.warnFlashTime = Math.max(0, shelfState.warnFlashTime - dt);
+      }
+
+      if (shelfState.padActive) {
+        shelfState.padElapsed += dt;
+        if (shelfState.padElapsed >= shelfState.padDuration) {
+          completePadAction();
+        }
+      }
+
+      renderScene(ts / 1000);
+      requestAnimationFrame(loop);
+    }
+
+    window.onload = function () {
+      syncStatusText();
+      requestAnimationFrame(loop);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>게임 UI 버튼 상호작용 & 모핑 샘플 20선</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=JetBrains+Mono:wght@600;800&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
+      background-color: #261910;
+      background-image:
+        repeating-linear-gradient(90deg, rgba(255, 224, 185, 0.02) 0px, rgba(255, 224, 185, 0.02) 2px, transparent 2px, transparent 16px),
+        radial-gradient(circle at 50% 15%, #462f1f 0%, #261910 75%, #180f09 100%);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', 'Noto Sans KR', monospace;
+    }
+
+    /* 크라프트 카드 표면 */
+    .sample-card {
+      background: linear-gradient(180deg, #fcf7ec 0%, #f5ebd6 100%);
+      box-shadow: 0 10px 24px -6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    /* 1. 도장 슬램 모핑 */
+    @keyframes stampDrop {
+      0% { transform: scale(2.3) rotate(-18deg); opacity: 0; }
+      60% { transform: scale(0.92) rotate(-6deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+    }
+    .morph-stamp-done {
+      animation: stampDrop 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 2. 트럭 주행 애니메이션 */
+    @keyframes truckDrive {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      100% { transform: translateX(220px); opacity: 0; }
+    }
+    .truck-driving {
+      animation: truckDrive 0.85s cubic-bezier(0.55, 0.05, 0.68, 0.19) forwards;
+    }
+
+    /* 4. 젤리 탄성 변형 */
+    @keyframes jellySquish {
+      0% { transform: scale(1, 1); }
+      25% { transform: scale(1.28, 0.72); }
+      50% { transform: scale(0.84, 1.18); }
+      75% { transform: scale(1.08, 0.94); }
+      100% { transform: scale(1, 1); }
+    }
+    .jelly-active {
+      animation: jellySquish 0.48s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    /* 5. 택배 박스 테이핑 지퍼 */
+    @keyframes tapeZip {
+      0% { width: 0%; opacity: 0.7; }
+      100% { width: 100%; opacity: 1; }
+    }
+    .tape-zipped {
+      animation: tapeZip 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 6. 레벨업 수치 팝 */
+    @keyframes lvPop {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.32); }
+      100% { transform: scale(1); }
+    }
+    .lv-pop-anim {
+      animation: lvPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 7. 서명 SVG 스트로크 */
+    .sign-path {
+      stroke-dasharray: 260;
+      stroke-dashoffset: 260;
+    }
+    .sign-path.drawn {
+      animation: drawSign 0.55s ease-out forwards;
+    }
+    @keyframes drawSign {
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* 9. 사이렌 경고 흔들림 */
+    @keyframes alertShake {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg); }
+      75% { transform: rotate(10deg); }
+    }
+    .siren-shake {
+      animation: alertShake 0.25s infinite ease-in-out;
+    }
+
+    /* 14. 컨베이어 벨트 줄무늬 이동 */
+    @keyframes beltMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 28px 0; }
+    }
+    .conveyor-running {
+      background-image: repeating-linear-gradient(
+        -45deg,
+        #1f2937 0px,
+        #1f2937 10px,
+        #f59e0b 10px,
+        #f59e0b 20px
+      );
+      background-size: 28px 28px;
+      animation: beltMove 0.6s linear infinite;
+    }
+
+    /* 15. 3D 카드 플립 */
+    .flip-perspective { perspective: 700px; }
+    .flip-inner {
+      transform-style: preserve-3d;
+      transition: transform 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .flip-inner.is-flipped { transform: rotateY(180deg); }
+    .flip-face { backface-visibility: hidden; }
+    .flip-back { transform: rotateY(180deg); }
+
+    /* 16. 체크마크 드로잉 */
+    .check-stroke {
+      stroke-dasharray: 24;
+      stroke-dashoffset: 24;
+      transition: stroke-dashoffset 0.35s ease-out 0.1s;
+    }
+    .is-checked .check-stroke {
+      stroke-dashoffset: 0;
+    }
+
+    /* 18. 구이(Gooey) 탄성 썸 */
+    .gooey-thumb {
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.2s ease;
+    }
+    .gooey-stretching {
+      width: 34px !important;
+    }
+
+    /* 10. 리퀴드 차오름 수면 기준 텍스트 분할 반전 (clip-path 동기화) */
+    .liquid-text-top {
+      clip-path: inset(0 0 var(--fill-pct, 0%) 0);
+      transition: clip-path 0.5s ease-out;
+    }
+    .liquid-text-bottom {
+      clip-path: inset(calc(100% - var(--fill-pct, 0%)) 0 0 0);
+      transition: clip-path 0.5s ease-out;
+    }
+
+    /* 8. 왼쪽 플레이 삼각형 아이콘 전용 슬라이드 루프 */
+    @keyframes playIconSlideLoop {
+      0% { transform: translateX(-50%); }
+      100% { transform: translateX(0%); }
+    }
+    .play-icon-loop-2x {
+      animation: playIconSlideLoop 0.75s linear infinite;
+    }
+    .play-icon-loop-3x {
+      animation: playIconSlideLoop 0.36s linear infinite;
+    }
+
+    /* 자물쇠 잠금 상태 '덜그럭' 흔들림 애니메이션 */
+    @keyframes lockRattle {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      15% { transform: translateX(-5px) rotate(-14deg); }
+      30% { transform: translateX(5px) rotate(14deg); }
+      45% { transform: translateX(-4px) rotate(-10deg); }
+      60% { transform: translateX(4px) rotate(10deg); }
+      75% { transform: translateX(-2px) rotate(-5deg); }
+      90% { transform: translateX(2px) rotate(5deg); }
+    }
+    .lock-rattling {
+      animation: lockRattle 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+    }
+
+    /* 잠김 텍스트 1회 강조 모션 (문구 변경 없이 크기·색상 하이라이트) */
+    @keyframes lockTextEmphasize {
+      0% { transform: scale(1); }
+      35% { transform: scale(1.16); color: #fde047; text-shadow: 0 0 8px rgba(250, 204, 21, 0.75); }
+      70% { transform: scale(0.96); }
+      100% { transform: scale(1); }
+    }
+    .lock-text-pulse {
+      display: inline-block;
+      animation: lockTextEmphasize 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 자물쇠 고리(Shackle) 해금 열림 모션 */
+    .padlock-shackle {
+      transform-box: fill-box;
+      transform-origin: 85% 90%;
+      transition: transform 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .padlock-open .padlock-shackle {
+      transform: translateY(-4.5px) rotate(24deg);
+    }
+
+    /* 파티클 캔버스 */
+    #fx-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-[#3a2618] pb-14">
+
+  <canvas id="fx-canvas"></canvas>
+
+  <!-- 상단 고정 컨트롤 바 -->
+  <header class="sticky top-0 z-40 bg-[#21140c]/95 backdrop-blur border-b border-[#7a5436]/50 px-4 py-3 shadow-2xl">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400/40 flex items-center justify-center text-amber-300 font-black">
+          UI
+        </div>
+        <div>
+          <h1 class="text-sm sm:text-base font-black text-amber-200">게임 UI 버튼 상호작용 & 모핑 샘플 20선</h1>
+          <p class="text-[11px] text-amber-200/60">클릭 · 길게 누르기 · 마우스 이동으로 형태 변형(Morph)과 피드백을 테스트하세요</p>
+        </div>
+      </div>
+
+      <!-- 카테고리 필터 & 전체 초기화 -->
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button onclick="filterCards('all')" data-filter="all" class="filter-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-amber-500 text-[#231206] transition">
+          전체 (21)
+        </button>
+        <button onclick="filterCards('morph')" data-filter="morph" class="filter-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#382315] text-amber-200 hover:bg-[#4d311e] transition">
+          형태 모핑 (8)
+        </button>
+        <button onclick="filterCards('logistics')" data-filter="logistics" class="filter-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#382315] text-amber-200 hover:bg-[#4d311e] transition">
+          물류/타이쿤 연출 (7)
+        </button>
+        <button onclick="filterCards('tactile')" data-filter="tactile" class="filter-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#382315] text-amber-200 hover:bg-[#4d311e] transition">
+          홀드/물리 탄성 (6)
+        </button>
+
+        <div class="w-px h-5 bg-amber-800/60 mx-1"></div>
+
+        <button onclick="resetAllButtons()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow flex items-center gap-1 active:scale-95 transition">
+          <span>↻ 전체 초기화</span>
+        </button>
+
+        <button onclick="toggleSound()" id="sound-toggle" class="px-2.5 py-1.5 rounded-xl bg-[#382315] text-amber-200 text-xs font-bold border border-amber-700/40">
+          🔊 ON
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 20개 샘플 그리드 -->
+  <main class="max-w-7xl mx-auto px-4 pt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+    <!-- #01 고용 승인 도장 모핑 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#01 · STAMP MORPH</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/채용</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">고용 승인 도장 변신</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">버튼이 납작한 붉은 고무도장 인장으로 변형되며 쾅 찍힙니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-01" onclick="runBtn01(event)"
+          class="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs shadow-md transition-all duration-300">
+          이력서 고용하기
+        </button>
+      </div>
+    </article>
+
+    <!-- #02 상차 출발 트럭 모핑 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48 overflow-hidden">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#02 · DISPATCH MORPH</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/출하</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">트럭 상차 출발 변신</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">클릭 시 버튼이 화물 트럭 캡슐로 줄어든 뒤 우측으로 출발합니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20 relative w-full">
+        <button id="btn-02" onclick="runBtn02(event)"
+          class="w-40 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 transition-all duration-300">
+          <span>🚚 상차 완료 · 출발</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #03 길게 누르기 홀드 해금 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#03 · HOLD TO UNLOCK</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">홀드/안전</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">잠금 덜그럭 & 홀드 해금</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">짧게 누르면 자물쇠가 덜그럭 흔들리고, 0.8초 꾹 누르면 고리가 열립니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-03"
+          onmousedown="startHold03(event)" onmouseup="cancelHold03(event)" onmouseleave="cancelHold03()"
+          ontouchstart="startHold03(event)" ontouchend="cancelHold03(event)"
+          class="relative overflow-hidden w-44 h-11 rounded-2xl bg-[#47301e] text-amber-100 font-black text-xs shadow-md transition-all duration-300 flex items-center justify-center">
+          <span id="btn-03-fill" class="absolute inset-y-0 left-0 w-0 bg-amber-500 transition-none"></span>
+          <span id="btn-03-label" class="relative z-10 flex items-center gap-1.5">
+            <svg id="btn-03-lock" class="w-4 h-4 shrink-0 overflow-visible" viewBox="0 0 24 24" fill="none">
+              <path class="padlock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#fbbf24" stroke-width="2.4" stroke-linecap="round"/>
+              <rect x="5" y="11" width="14" height="10" rx="2.5" fill="#f59e0b" stroke="#78350f" stroke-width="1.5"/>
+              <circle cx="12" cy="15.5" r="1.3" fill="#451a03"/>
+              <path d="M12 16.5v2" stroke="#451a03" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span id="btn-03-text">꾹 눌러 해금 (500G)</span>
+          </span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #04 젤리 탄성 바운스 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#04 · JELLY SQUISH</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">물리 탄성</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">젤리 탄성 & 코인 팝</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">가로로 찌그러졌다가 튕겨 오르며 금화 파티클을 뿜어냅니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-04" onclick="runBtn04(event)"
+          class="px-5 py-2.5 rounded-2xl bg-gradient-to-b from-yellow-400 to-amber-500 text-[#331a05] font-black text-xs shadow-md border-b-4 border-amber-700">
+          💰 일일 보너스 받기
+        </button>
+      </div>
+    </article>
+
+    <!-- #05 택배 박스 테이핑 모핑 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#05 · BOX SEALING</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/포장</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">택배 상자 테이핑 봉인</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">버튼이 크라프트 상자 형태로 변하고 중앙에 포장 테이프가 감깁니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-05" onclick="runBtn05(event)"
+          class="relative overflow-hidden w-40 h-11 rounded-xl bg-[#c68b53] hover:bg-[#b57a43] text-white font-black text-xs shadow-md border-2 border-[#8c5828] transition-all duration-300">
+          <span id="btn-05-tape" class="hidden absolute left-0 top-1/2 -translate-y-1/2 h-3 bg-amber-200/85 border-y border-amber-500/60"></span>
+          <span id="btn-05-label" class="relative z-10">📦 포장 완료 처리</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #06 업그레이드 레벨업 확장 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#06 · LEVEL UP MORPH</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/강화</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">업그레이드 수치 모핑</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">클릭할 때마다 버튼 폭과 레벨 뱃지가 팽창하며 등급이 상승합니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-06" onclick="runBtn06(event)"
+          class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs shadow-md flex items-center gap-2 transition-all duration-300">
+          <span id="btn-06-lv" class="px-1.5 py-0.5 rounded bg-black/25 font-mono-num">LV.1</span>
+          <span id="btn-06-txt">적재량 강화 ▲</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #07 전자서명 필기 모핑 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#07 · SIGNATURE MORPH</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/계약</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">계약서 자동 서명 모핑</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">버튼이 서명 용지로 펼쳐지며 만년필 싸인이 그려진 뒤 체결됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-07" onclick="runBtn07(event)"
+          class="w-40 h-10 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-black text-xs shadow-md flex items-center justify-center transition-all duration-300">
+          <span id="btn-07-label">✒️ 계약서 서명하기</span>
+          <svg id="btn-07-svg" class="hidden w-32 h-9" viewBox="0 0 140 40">
+            <path id="btn-07-path" class="sign-path" d="M12,28 Q26,8 36,26 T62,18 T88,28 Q108,10 128,24" fill="none" stroke="#1e293b" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </article>
+
+    <!-- #08 게임 배속 순환 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#08 · SPEED CYCLE</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">1x → 2x → 3x 배속 아이콘 루프</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">1배속은 정지, 2·3배속 전환 시 왼쪽 플레이 삼각형만 연속 슬라이드 루프됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-08" onclick="runBtn08(event)"
+          class="w-24 h-10 rounded-full bg-stone-700 text-amber-100 font-mono-num font-black text-xs shadow-md flex items-center justify-center gap-1.5 transition-all duration-300">
+          <!-- 왼쪽 플레이 삼각형 슬라이드 루프 창 -->
+          <span id="btn-08-icon-box" class="relative overflow-hidden w-4 h-4 flex items-center justify-center shrink-0">
+            <span id="btn-08-icon-static" class="text-[11px] leading-none">▶</span>
+            <span id="btn-08-icon-loop" class="hidden absolute left-0 top-0 h-full w-[200%] flex items-center text-[10px] leading-none whitespace-nowrap">
+              <span class="w-1/2 flex justify-center">▶▶</span>
+              <span class="w-1/2 flex justify-center">▶▶</span>
+            </span>
+          </span>
+          <span id="btn-08-label">1.0x</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #09 긴급 병목 경고 사이렌 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#09 · ALERT EXPAND</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">병목 경고 뱃지 확장</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">작은 원형 아이콘이 클릭 시 긴급 경고 배너 알약으로 펼쳐집니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-09" onclick="runBtn09(event)"
+          class="w-11 h-11 rounded-full bg-rose-600 text-white font-black text-xs shadow-lg flex items-center justify-center overflow-hidden transition-all duration-300">
+          <span id="btn-09-icon" class="siren-shake text-base">⚠️</span>
+          <span id="btn-09-text" class="hidden ml-1.5 whitespace-nowrap">적체 경고! 즉시 처리</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #10 리퀴드 채우기 물결 버튼 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#10 · LIQUID FILL</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">리퀴드 차오름 버튼</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">아래에서부터 황금빛 게이지가 차오르며 수면 기준으로 글자 색상이 분할 반전됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-10" onclick="runBtn10(event)" style="--fill-pct: 0%;"
+          class="relative overflow-hidden w-40 h-11 rounded-xl border-2 border-amber-700 bg-transparent font-black text-xs select-none">
+          <!-- 하단에서 차오르는 리퀴드 배경 -->
+          <span id="btn-10-liquid" class="absolute inset-x-0 bottom-0 h-0 bg-amber-600 transition-all duration-500 ease-out"></span>
+          <!-- 미충전 영역(윗부분) 어두운 텍스트 -->
+          <span id="btn-10-label-top" class="liquid-text-top absolute inset-0 z-10 flex items-center justify-center text-amber-950 pointer-events-none">
+            ⚡ 에너지 충전하기
+          </span>
+          <!-- 충전 영역(아랫부분) 반전된 밝은 텍스트 -->
+          <span id="btn-10-label-bottom" class="liquid-text-bottom absolute inset-0 z-20 flex items-center justify-center text-white pointer-events-none">
+            ⚡ 에너지 충전하기
+          </span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #11 자석 커서 추종 버튼 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#11 · MAGNETIC PULL</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">물리 탄성</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">자석 인력 추종 버튼</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">마우스 커서를 가까이 대면 버튼이 자석처럼 끌려오며 기울어집니다.</p>
+      </div>
+      <div onmousemove="magnetMove11(event)" onmouseleave="magnetLeave11()" class="flex items-center justify-center h-20 w-full">
+        <button id="btn-11" onclick="playSound('pop')"
+          class="px-5 py-2.5 rounded-2xl bg-[#5c3a21] text-amber-100 font-black text-xs shadow-lg transition-transform duration-150 ease-out">
+          🧲 마그네틱 버튼
+        </button>
+      </div>
+    </article>
+
+    <!-- #12 해고 2단계 분할 확인 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#12 · SPLIT CONFIRM</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">해고 2단계 분할 모핑</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">실수 방지를 위해 클릭 시 [확인]과 [취소] 두 버튼으로 갈라집니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <div id="btn-12-wrap" class="flex items-center gap-1.5">
+          <button id="btn-12-init" onclick="splitBtn12()"
+            class="px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-800 border border-red-300 font-black text-xs transition-all">
+            🗑️ 알바 해고
+          </button>
+        </div>
+      </div>
+    </article>
+
+    <!-- #13 정산 수령 코인 흡수 모핑 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#13 · COIN ABSORB</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/수익</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">매출 수령 동전 압축</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">직사각 버튼이 동그란 금화로 압축된 뒤 상단으로 흡수됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-13" onclick="runBtn13(event)"
+          class="w-40 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#2b1605] font-mono-num font-black text-xs shadow-md transition-all duration-300">
+          +12,500G 수령
+        </button>
+      </div>
+    </article>
+
+    <!-- #14 컨베이어 벨트 가동 스위치 -->
+    <article data-cat="logistics" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#14 · CONVEYOR BELT</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-200/70 text-amber-900">물류/설비</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">컨베이어 레일 가동 모핑</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">정지된 회색 바가 산업용 안전 줄무늬 레일로 변하며 회전합니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-14" onclick="runBtn14()"
+          class="w-44 h-11 rounded-full bg-stone-600 text-white font-black text-xs shadow-inner border-2 border-stone-800 flex items-center justify-center transition-all duration-300">
+          <span class="px-3 py-1 rounded-full bg-black/75 backdrop-blur-sm">⚙️ 레일 가동: OFF</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #15 3D 카드 플립 정보 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#15 · 3D CARD FLIP</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">3D 뒤집기 스탯 스위치</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">클릭 시 Y축으로 180도 회전하며 뒷면의 상세 수치를 보여줍니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20 flip-perspective">
+        <div id="btn-15" onclick="runBtn15()" class="flip-inner relative w-40 h-11 cursor-pointer">
+          <div class="flip-face absolute inset-0 rounded-xl bg-indigo-700 text-white font-black text-xs flex items-center justify-center shadow-md">
+            📋 상세 스펙 보기 ↻
+          </div>
+          <div class="flip-face flip-back absolute inset-0 rounded-xl bg-amber-100 border-2 border-indigo-700 text-indigo-950 font-mono-num font-extrabold text-[11px] flex items-center justify-center shadow-md">
+            적재 10 · 이속 +25%
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- #16 사각 아이콘 → 완료 알약 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#16 · ICON TO PILL</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">정사각 → 완료 알약 모핑</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">44px 정사각형 버튼이 길쭉한 초록 알약으로 늘어나며 체크됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-16" onclick="runBtn16(event)"
+          class="w-11 h-11 rounded-xl bg-[#4b321e] text-amber-200 font-black text-xs shadow-md flex items-center justify-center gap-1.5 overflow-hidden transition-all duration-300">
+          <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline class="check-stroke" points="20 6 9 17 4 12"></polyline>
+            <circle id="btn-16-dot" cx="12" cy="12" r="3" fill="currentColor"></circle>
+          </svg>
+          <span id="btn-16-txt" class="hidden whitespace-nowrap">검수 완료됨</span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #17 미니 영수증 배출 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#17 · RECEIPT POP</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">영수증 돌출 포스기 버튼</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">버튼 상단 틈새에서 미니 정산 영수증 종이가 쏙 올라옵니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20 pt-3">
+        <div class="relative">
+          <div id="btn-17-slip"
+            class="absolute left-1/2 -translate-x-1/2 bottom-7 w-28 h-0 bg-white border border-stone-300 rounded-t text-[9px] font-mono-num text-center text-stone-700 overflow-hidden transition-all duration-300 shadow-sm flex flex-col justify-center">
+            <span class="font-bold text-emerald-700">+373,000G</span>
+            <span class="text-[8px] text-stone-400">PRINTED OK</span>
+          </div>
+          <button onclick="runBtn17()"
+            class="relative z-10 w-36 h-10 rounded-xl bg-[#3d2817] hover:bg-[#523620] text-amber-200 font-black text-xs shadow-md border-t-2 border-stone-900">
+            🧾 정산서 출력
+          </button>
+        </div>
+      </div>
+    </article>
+
+    <!-- #18 구이(Gooey) 탄성 토글 스위치 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#18 · GOOEY SWITCH</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">물리 탄성</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">점성 탄성(Gooey) 토글</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">원형 노브가 이동하는 순간 물방울처럼 길게 늘어났다가 복원됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-18" onclick="runBtn18()"
+          class="w-20 h-10 rounded-full bg-stone-300 p-1 flex items-center transition-colors duration-300 shadow-inner">
+          <span id="btn-18-thumb" class="gooey-thumb w-8 h-8 rounded-full bg-white shadow-md block"></span>
+        </button>
+      </div>
+    </article>
+
+    <!-- #19 확장형 퀵 액션 툴바 모핑 -->
+    <article data-cat="morph" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#19 · EXPAND DOCK</span>
+          <span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-900">형태 모핑</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">원형 '+' → 퀵 툴바 확장</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">동그란 추가 버튼이 가로형 서브 메뉴 바로 매끄럽게 펼쳐집니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <div id="btn-19"
+          class="h-11 w-11 rounded-full bg-[#4b311c] text-amber-200 shadow-lg flex items-center justify-center px-2 gap-2 overflow-hidden transition-all duration-300">
+          <button onclick="runBtn19()" id="btn-19-plus" class="w-7 h-7 rounded-full bg-amber-500 text-[#231206] font-black text-base flex items-center justify-center shrink-0 transition-transform duration-300">
+            +
+          </button>
+          <div id="btn-19-items" class="hidden items-center gap-2 text-xs font-bold whitespace-nowrap pr-1">
+            <button onclick="playSound('pop')" class="hover:text-white">📦 입고</button>
+            <span class="text-amber-700">|</span>
+            <button onclick="playSound('pop')" class="hover:text-white">👷 배치</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- #20 쿨다운 원형 카운트다운 모핑 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#20 · COOLDOWN MORPH</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">홀드/안전</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">스킬 사용 → 원형 쿨타임</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">발동 즉시 원형 타이머(3초)로 수축했다가 완료 후 복원됩니다.</p>
+      </div>
+      <div class="flex items-center justify-center h-20">
+        <button id="btn-20" onclick="runBtn20(event)"
+          class="w-36 h-11 rounded-xl bg-gradient-to-b from-rose-500 to-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center transition-all duration-300">
+          🔥 피버 타임 발동
+        </button>
+      </div>
+    </article>
+
+    <!-- #21 잠금 덜그럭 & 열쇠 해금 -->
+    <article data-cat="tactile" class="sample-card rounded-2xl p-4 border-2 border-[#d5c3a1] flex flex-col justify-between h-48">
+      <div>
+        <div class="flex items-center justify-between text-[10px] font-mono-num font-bold text-[#8a6848]">
+          <span>#21 · LOCK RATTLE & OPEN</span>
+          <span class="px-1.5 py-0.5 rounded bg-sky-100 text-sky-900">잠금/해금</span>
+        </div>
+        <h2 class="text-sm font-black text-[#3a2412] mt-1">잠금 덜그럭 & 열쇠 해금</h2>
+        <p class="text-[11px] text-[#7a5a3d] mt-0.5">잠금 버튼 클릭 시 자물쇠만 덜그럭 흔들리고, 열쇠로 해금 시 고리가 열립니다.</p>
+      </div>
+      <div class="flex items-center justify-center gap-2 h-20">
+        <button id="btn-21" onclick="clickLocked21(event)"
+          class="px-3.5 h-11 rounded-xl bg-stone-700 text-stone-200 border-2 border-stone-800 font-black text-xs shadow-md flex items-center gap-2 transition-colors duration-300">
+          <svg id="btn-21-lock" class="w-5 h-5 shrink-0 overflow-visible" viewBox="0 0 24 24" fill="none">
+            <path class="padlock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#cbd5e1" stroke-width="2.4" stroke-linecap="round"/>
+            <rect x="5" y="11" width="14" height="10" rx="2.5" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+            <circle cx="12" cy="15.5" r="1.3" fill="#1e293b"/>
+            <path d="M12 16.5v2" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span id="btn-21-text">제2창고 잠김</span>
+        </button>
+        <button id="btn-21-key" onclick="unlockBtn21(event)" title="열쇠로 잠금 해제"
+          class="w-11 h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#2b1605] font-black text-base shadow-md border-b-2 border-amber-700 flex items-center justify-center active:scale-95 transition">
+          🔑
+        </button>
+      </div>
+    </article>
+
+  </main>
+
+  <script>
+    /* ========================================================
+       1. Web Audio API 효과음 합성기
+       ======================================================== */
+    let audioCtx = null;
+    let isSoundOn = true;
+
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playSound(type) {
+      if (!isSoundOn) return;
+      try {
+        initAudio();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        if (type === 'stamp') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(140, now);
+          osc.frequency.exponentialRampToValueAtTime(30, now + 0.16);
+          gain.gain.setValueAtTime(0.65, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        } else if (type === 'coin') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now);
+          osc.frequency.setValueAtTime(1318.5, now + 0.06);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        } else if (type === 'truck') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(110, now);
+          osc.frequency.linearRampToValueAtTime(220, now + 0.35);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+        } else if (type === 'rattle') {
+          // 금속 자물쇠 '덜그럭-덜그럭' 2연타 효과음
+          [0, 0.09].forEach((offset, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'square';
+            o.frequency.setValueAtTime(idx === 0 ? 240 : 195, now + offset);
+            o.frequency.exponentialRampToValueAtTime(95, now + offset + 0.06);
+            g.gain.setValueAtTime(0.14, now + offset);
+            g.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.07);
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start(now + offset);
+            o.stop(now + offset + 0.075);
+          });
+          return;
+        } else if (type === 'unlock') {
+          // 자물쇠 철컥 열림 + 맑은 차임음
+          const clank = audioCtx.createOscillator();
+          const clankGain = audioCtx.createGain();
+          clank.type = 'triangle';
+          clank.frequency.setValueAtTime(320, now);
+          clank.frequency.exponentialRampToValueAtTime(620, now + 0.07);
+          clankGain.gain.setValueAtTime(0.22, now);
+          clankGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          clank.connect(clankGain);
+          clankGain.connect(audioCtx.destination);
+          clank.start(now);
+          clank.stop(now + 0.1);
+
+          [659.25, 880, 1174.66].forEach((freq, idx) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(freq, now + 0.06 + idx * 0.055);
+            g.gain.setValueAtTime(0.15, now + 0.06 + idx * 0.055);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.06 + idx * 0.055 + 0.24);
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start(now + 0.06 + idx * 0.055);
+            o.stop(now + 0.06 + idx * 0.055 + 0.25);
+          });
+          return;
+        } else {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(460, now);
+          osc.frequency.exponentialRampToValueAtTime(680, now + 0.08);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+        }
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.42);
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      isSoundOn = !isSoundOn;
+      document.getElementById('sound-toggle').innerText = isSoundOn ? '🔊 ON' : '🔇 OFF';
+    }
+
+    /* ========================================================
+       2. 파티클 캔버스 엔진
+       ======================================================== */
+    const canvas = document.getElementById('fx-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function burst(e, colors, count = 18) {
+      let cx = window.innerWidth / 2;
+      let cy = window.innerHeight / 2;
+      if (e && typeof e.clientX === 'number' && e.clientX > 0) {
+        cx = e.clientX;
+        cy = e.clientY;
+      } else if (e && e.currentTarget && e.currentTarget.getBoundingClientRect) {
+        const rect = e.currentTarget.getBoundingClientRect();
+        cx = rect.left + rect.width / 2;
+        cy = rect.top + rect.height / 2;
+      }
+      for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = 2 + Math.random() * 5;
+        particles.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp - 2,
+          size: 3 + Math.random() * 4,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          alpha: 1
+        });
+      }
+    }
+
+    function animateFx() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.16;
+        p.alpha -= 0.028;
+        if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      requestAnimationFrame(animateFx);
+    }
+
+    /* ========================================================
+       3. 카테고리 필터
+       ======================================================== */
+    function filterCards(cat) {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.getAttribute('data-filter') === cat;
+        btn.className = active
+          ? 'filter-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-amber-500 text-[#231206] transition'
+          : 'filter-btn px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#382315] text-amber-200 hover:bg-[#4d311e] transition';
+      });
+      document.querySelectorAll('article[data-cat]').forEach(card => {
+        card.style.display = (cat === 'all' || card.getAttribute('data-cat') === cat) ? 'flex' : 'none';
+      });
+    }
+
+    /* ========================================================
+       4. 개별 버튼 인터랙션 핸들러
+       ======================================================== */
+    // #01 고용 도장 모핑
+    function runBtn01(e) {
+      const b = document.getElementById('btn-01');
+      if (b.dataset.done === '1') return;
+      b.dataset.done = '1';
+      playSound('stamp');
+      burst(e, ['#dc2626', '#f59e0b', '#fef2f2'], 24);
+      b.className = 'morph-stamp-done px-4 py-1.5 rounded-lg border-[3px] border-double border-red-600 bg-white text-red-600 font-black text-xs tracking-widest shadow-lg';
+      b.innerText = '✓ 고용 승인됨';
+    }
+
+    // #02 상차 트럭 주행 모핑
+    function runBtn02(e) {
+      const b = document.getElementById('btn-02');
+      if (b.dataset.busy === '1') return;
+      b.dataset.busy = '1';
+      playSound('truck');
+      burst(e, ['#10b981', '#fde047'], 16);
+      b.className = 'w-14 h-10 rounded-full bg-emerald-600 text-white font-black text-base shadow-md flex items-center justify-center transition-all duration-300';
+      b.innerText = '🚚';
+      setTimeout(() => b.classList.add('truck-driving'), 240);
+      setTimeout(() => {
+        b.dataset.busy = '0';
+        b.className = 'w-40 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 transition-all duration-300';
+        b.innerHTML = '<span>🚚 상차 완료 · 출발</span>';
+      }, 1250);
+    }
+
+    // #03 길게 누르기 홀드 해금 & 짧은 클릭 시 자물쇠만 덜그럭 흔들림
+    let holdTimer03 = null;
+    let holdStart03 = 0;
+    function triggerRattleAnim(el) {
+      if (!el) return;
+      el.classList.remove('lock-rattling');
+      void el.getBoundingClientRect();
+      el.classList.add('lock-rattling');
+    }
+
+    function triggerLockTextPulse(el) {
+      if (!el) return;
+      el.classList.remove('lock-text-pulse');
+      void el.getBoundingClientRect();
+      el.classList.add('lock-text-pulse');
+    }
+
+    function startHold03(e) {
+      if (e) e.preventDefault();
+      const b = document.getElementById('btn-03');
+      if (b.dataset.unlocked === '1') return;
+      holdStart03 = Date.now();
+      const fill = document.getElementById('btn-03-fill');
+      fill.style.transition = 'width 0.8s linear';
+      fill.style.width = '100%';
+      holdTimer03 = setTimeout(() => {
+        b.dataset.unlocked = '1';
+        playSound('unlock');
+        burst({ currentTarget: b }, ['#facc15', '#10b981', '#ffffff'], 24);
+        b.className = 'w-32 h-11 rounded-full bg-emerald-600 text-white font-black text-xs shadow-lg flex items-center justify-center gap-1.5 transition-all duration-300';
+        const lockSvg = document.getElementById('btn-03-lock');
+        const txt = document.getElementById('btn-03-text');
+        if (fill) fill.style.display = 'none';
+        if (lockSvg) lockSvg.classList.add('padlock-open');
+        if (txt) txt.innerText = '해금 완료!';
+      }, 800);
+    }
+
+    function cancelHold03(e) {
+      clearTimeout(holdTimer03);
+      const b = document.getElementById('btn-03');
+      if (!b || b.dataset.unlocked === '1') return;
+      const elapsed = Date.now() - holdStart03;
+      const fill = document.getElementById('btn-03-fill');
+      if (fill) {
+        fill.style.transition = 'width 0.2s ease-out';
+        fill.style.width = '0%';
+      }
+      // 짧은 클릭 시 버튼 본체는 고정된 채 자물쇠 아이콘만 '덜그럭' 흔들리고 기존 텍스트가 한 번 강조됨
+      if (e && elapsed < 350) {
+        playSound('rattle');
+        triggerRattleAnim(document.getElementById('btn-03-lock'));
+        triggerLockTextPulse(document.getElementById('btn-03-text'));
+      }
+    }
+
+    // #04 젤리 탄성
+    function runBtn04(e) {
+      const b = document.getElementById('btn-04');
+      playSound('coin');
+      burst(e, ['#facc15', '#f59e0b', '#ffffff'], 24);
+      b.classList.remove('jelly-active');
+      void b.offsetWidth;
+      b.classList.add('jelly-active');
+    }
+
+    // #05 택배 테이핑
+    function runBtn05(e) {
+      const b = document.getElementById('btn-05');
+      if (b.dataset.sealed === '1') return;
+      b.dataset.sealed = '1';
+      playSound('pop');
+      burst(e, ['#fde68a', '#d97706'], 16);
+      b.className = 'relative overflow-hidden w-28 h-12 rounded-md bg-[#b67a42] text-amber-950 font-black text-xs shadow-inner border-2 border-[#75471c] transition-all duration-300';
+      const tape = document.getElementById('btn-05-tape');
+      tape.classList.remove('hidden');
+      tape.classList.add('tape-zipped');
+      document.getElementById('btn-05-label').innerText = '봉인 완료';
+    }
+
+    // #06 업그레이드
+    let lv06 = 1;
+    function runBtn06(e) {
+      lv06 = lv06 >= 10 ? 1 : lv06 + 1;
+      playSound('coin');
+      burst(e, ['#fb923c', '#fde047'], 16);
+      const b = document.getElementById('btn-06');
+      const lvEl = document.getElementById('btn-06-lv');
+      lvEl.innerText = `LV.${lv06}`;
+      b.classList.remove('lv-pop-anim');
+      void b.offsetWidth;
+      b.classList.add('lv-pop-anim');
+    }
+
+    // #07 전자서명
+    function runBtn07(e) {
+      const b = document.getElementById('btn-07');
+      if (b.dataset.signed === '1') return;
+      b.dataset.signed = '1';
+      playSound('pop');
+      b.className = 'w-44 h-12 rounded-xl bg-amber-50 border-2 border-teal-700 text-teal-950 font-black text-xs shadow-inner flex items-center justify-center transition-all duration-300';
+      document.getElementById('btn-07-label').classList.add('hidden');
+      const svg = document.getElementById('btn-07-svg');
+      const path = document.getElementById('btn-07-path');
+      svg.classList.remove('hidden');
+      path.classList.add('drawn');
+      setTimeout(() => {
+        playSound('stamp');
+        burst(e, ['#0d9488', '#f59e0b'], 18);
+        svg.classList.add('hidden');
+        const lbl = document.getElementById('btn-07-label');
+        lbl.classList.remove('hidden');
+        lbl.innerText = '✓ 계약 체결 완료';
+        b.className = 'w-40 h-10 rounded-xl bg-teal-800 text-amber-200 font-black text-xs shadow-md flex items-center justify-center transition-all duration-300';
+      }, 650);
+    }
+
+    // #08 배속 순환 (1.0x 정지 / 2.0x·3.0x 왼쪽 플레이 삼각형만 슬라이드 루프)
+    let speedIdx08 = 0;
+    const speeds08 = [
+      {
+        label: '1.0x',
+        btnCls: 'w-24 h-10 rounded-full bg-stone-700 text-amber-100',
+        boxWidth: 'w-4',
+        loopCls: ''
+      },
+      {
+        label: '2.0x',
+        btnCls: 'w-28 h-10 rounded-full bg-amber-600 text-white',
+        boxWidth: 'w-6',
+        loopCls: 'play-icon-loop-2x'
+      },
+      {
+        label: '3.0x',
+        btnCls: 'w-32 h-10 rounded-full bg-rose-600 text-white ring-2 ring-amber-300/70',
+        boxWidth: 'w-7',
+        loopCls: 'play-icon-loop-3x'
+      }
+    ];
+    function runBtn08(e) {
+      speedIdx08 = (speedIdx08 + 1) % speeds08.length;
+      playSound('pop');
+      const cfg = speeds08[speedIdx08];
+      const b = document.getElementById('btn-08');
+      const box = document.getElementById('btn-08-icon-box');
+      const staticIcon = document.getElementById('btn-08-icon-static');
+      const loopIcon = document.getElementById('btn-08-icon-loop');
+      const lbl = document.getElementById('btn-08-label');
+
+      b.className = `${cfg.btnCls} font-mono-num font-black text-xs shadow-md flex items-center justify-center gap-1.5 transition-all duration-300`;
+      if (box) {
+        box.className = `relative overflow-hidden ${cfg.boxWidth} h-4 flex items-center justify-center shrink-0 transition-all duration-300`;
+      }
+      if (speedIdx08 === 0) {
+        if (staticIcon) staticIcon.classList.remove('hidden');
+        if (loopIcon) loopIcon.classList.add('hidden');
+      } else {
+        if (staticIcon) staticIcon.classList.add('hidden');
+        if (loopIcon) {
+          loopIcon.className = `${cfg.loopCls} absolute left-0 top-0 h-full w-[200%] flex items-center text-[10px] leading-none whitespace-nowrap`;
+        }
+      }
+      if (lbl) lbl.innerText = cfg.label;
+    }
+
+    // #09 경고 확장
+    let open09 = false;
+    function runBtn09() {
+      open09 = !open09;
+      playSound('pop');
+      const b = document.getElementById('btn-09');
+      const txt = document.getElementById('btn-09-text');
+      if (open09) {
+        b.className = 'w-44 h-11 px-3 rounded-full bg-rose-600 text-white font-black text-xs shadow-lg flex items-center justify-center overflow-hidden transition-all duration-300';
+        if (txt) txt.classList.remove('hidden');
+      } else {
+        b.className = 'w-11 h-11 rounded-full bg-rose-600 text-white font-black text-xs shadow-lg flex items-center justify-center overflow-hidden transition-all duration-300';
+        if (txt) txt.classList.add('hidden');
+      }
+    }
+
+    // #10 리퀴드 채우기 (수면 높이 기준 상/하 텍스트 실시간 색상 반전)
+    let fill10 = 0;
+    function runBtn10(e) {
+      fill10 = fill10 >= 100 ? 0 : fill10 + 50;
+      playSound('pop');
+      const btn = document.getElementById('btn-10');
+      const liq = document.getElementById('btn-10-liquid');
+      const lblTop = document.getElementById('btn-10-label-top');
+      const lblBottom = document.getElementById('btn-10-label-bottom');
+
+      if (btn) btn.style.setProperty('--fill-pct', `${fill10}%`);
+      if (liq) liq.style.height = `${fill10}%`;
+
+      const nextText = fill10 === 100
+        ? '⚡ 충전 100% 완료!'
+        : (fill10 === 50 ? '⚡ 충전중 (50%)' : '⚡ 에너지 충전하기');
+
+      if (lblTop) lblTop.innerText = nextText;
+      if (lblBottom) lblBottom.innerText = nextText;
+
+      if (fill10 === 100 && e) {
+        burst(e, ['#f59e0b', '#fde047'], 18);
+      }
+    }
+
+    // #11 자석 커서
+    function magnetMove11(e) {
+      const b = document.getElementById('btn-11');
+      const rect = e.currentTarget.getBoundingClientRect();
+      const dx = (e.clientX - (rect.left + rect.width / 2)) * 0.25;
+      const dy = (e.clientY - (rect.top + rect.height / 2)) * 0.35;
+      b.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.25}deg)`;
+    }
+    function magnetLeave11() {
+      const b = document.getElementById('btn-11');
+      b.style.transform = 'translate(0px, 0px) rotate(0deg)';
+    }
+
+    // #12 2단계 확인 분할
+    function splitBtn12() {
+      playSound('pop');
+      const wrap = document.getElementById('btn-12-wrap');
+      wrap.innerHTML = `
+        <button onclick="confirmSplit12(event)" class="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs shadow transition-all">✓ 해고 확정</button>
+        <button onclick="resetSplit12()" class="px-3 py-2 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold text-xs transition-all">✕ 취소</button>
+      `;
+    }
+    function confirmSplit12(e) {
+      playSound('stamp');
+      burst(e, ['#ef4444', '#9ca3af'], 16);
+      document.getElementById('btn-12-wrap').innerHTML = `<span class="text-xs font-black text-red-700">해고 처리 완료</span>`;
+    }
+    function resetSplit12() {
+      playSound('pop');
+      document.getElementById('btn-12-wrap').innerHTML = `
+        <button id="btn-12-init" onclick="splitBtn12()" class="px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-800 border border-red-300 font-black text-xs transition-all">🗑️ 알바 해고</button>
+      `;
+    }
+
+    // #13 코인 흡수
+    function runBtn13(e) {
+      const b = document.getElementById('btn-13');
+      if (b.dataset.busy === '1') return;
+      b.dataset.busy = '1';
+      playSound('coin');
+      burst(e, ['#facc15', '#f59e0b'], 22);
+      b.className = 'w-11 h-11 rounded-full bg-yellow-400 border-2 border-amber-700 text-amber-950 font-black text-base shadow-lg flex items-center justify-center transition-all duration-300';
+      b.innerText = '🪙';
+      setTimeout(() => {
+        b.dataset.busy = '0';
+        b.className = 'w-40 h-10 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#2b1605] font-mono-num font-black text-xs shadow-md transition-all duration-300';
+        b.innerText = '+12,500G 수령';
+      }, 950);
+    }
+
+    // #14 컨베이어 가동
+    let beltOn14 = false;
+    function runBtn14() {
+      beltOn14 = !beltOn14;
+      playSound('truck');
+      const b = document.getElementById('btn-14');
+      if (beltOn14) {
+        b.className = 'w-44 h-11 rounded-full conveyor-running text-white font-black text-xs shadow-md border-2 border-amber-900 flex items-center justify-center transition-all duration-300';
+        b.innerHTML = '<span class="px-3 py-1 rounded-full bg-black/80 text-amber-300">⚙️ 레일 가동: ON</span>';
+      } else {
+        b.className = 'w-44 h-11 rounded-full bg-stone-600 text-white font-black text-xs shadow-inner border-2 border-stone-800 flex items-center justify-center transition-all duration-300';
+        b.innerHTML = '<span class="px-3 py-1 rounded-full bg-black/75">⚙️ 레일 가동: OFF</span>';
+      }
+    }
+
+    // #15 3D 플립
+    function runBtn15() {
+      playSound('pop');
+      document.getElementById('btn-15').classList.toggle('is-flipped');
+    }
+
+    // #16 사각 -> 완료 알약
+    let checked16 = false;
+    function runBtn16(e) {
+      checked16 = !checked16;
+      playSound('pop');
+      const b = document.getElementById('btn-16');
+      const dot = document.getElementById('btn-16-dot');
+      const txt = document.getElementById('btn-16-txt');
+      if (checked16) {
+        burst(e, ['#10b981', '#a7f3d0'], 14);
+        b.className = 'is-checked w-36 h-11 px-4 rounded-full bg-emerald-600 text-white font-black text-xs shadow-md flex items-center justify-center gap-1.5 overflow-hidden transition-all duration-300';
+        dot.classList.add('hidden');
+        txt.classList.remove('hidden');
+      } else {
+        b.className = 'w-11 h-11 rounded-xl bg-[#4b321e] text-amber-200 font-black text-xs shadow-md flex items-center justify-center gap-1.5 overflow-hidden transition-all duration-300';
+        dot.classList.remove('hidden');
+        txt.classList.add('hidden');
+      }
+    }
+
+    // #17 미니 영수증
+    let slipOut17 = false;
+    function runBtn17() {
+      slipOut17 = !slipOut17;
+      playSound('pop');
+      document.getElementById('btn-17-slip').style.height = slipOut17 ? '34px' : '0px';
+    }
+
+    // #18 구이 토글
+    let switch18 = false;
+    function runBtn18() {
+      switch18 = !switch18;
+      playSound('pop');
+      const b = document.getElementById('btn-18');
+      const thumb = document.getElementById('btn-18-thumb');
+      thumb.classList.add('gooey-stretching');
+      setTimeout(() => thumb.classList.remove('gooey-stretching'), 200);
+
+      if (switch18) {
+        b.className = 'w-20 h-10 rounded-full bg-emerald-500 p-1 flex items-center transition-colors duration-300 shadow-inner';
+        thumb.style.transform = 'translateX(40px)';
+      } else {
+        b.className = 'w-20 h-10 rounded-full bg-stone-300 p-1 flex items-center transition-colors duration-300 shadow-inner';
+        thumb.style.transform = 'translateX(0px)';
+      }
+    }
+
+    // #19 확장 툴바
+    let open19 = false;
+    function runBtn19() {
+      open19 = !open19;
+      playSound('pop');
+      const dock = document.getElementById('btn-19');
+      const plus = document.getElementById('btn-19-plus');
+      const items = document.getElementById('btn-19-items');
+      if (open19) {
+        dock.className = 'h-11 w-44 rounded-full bg-[#4b311c] text-amber-200 shadow-lg flex items-center justify-between px-2 gap-2 overflow-hidden transition-all duration-300';
+        plus.style.transform = 'rotate(45deg)';
+        items.classList.remove('hidden');
+        items.classList.add('flex');
+      } else {
+        dock.className = 'h-11 w-11 rounded-full bg-[#4b311c] text-amber-200 shadow-lg flex items-center justify-center px-2 gap-2 overflow-hidden transition-all duration-300';
+        plus.style.transform = 'rotate(0deg)';
+        items.classList.add('hidden');
+        items.classList.remove('flex');
+      }
+    }
+
+    // #20 쿨다운 원형 모핑
+    let cdTimer20 = null;
+    function runBtn20(e) {
+      const b = document.getElementById('btn-20');
+      if (b.dataset.cd === '1') return;
+      b.dataset.cd = '1';
+      playSound('coin');
+      burst(e, ['#f43f5e', '#fbbf24'], 22);
+
+      let sec = 3;
+      b.className = 'w-12 h-12 rounded-full bg-stone-800 border-2 border-rose-500 text-rose-300 font-mono-num font-black text-sm shadow-inner flex items-center justify-center transition-all duration-300';
+      b.innerText = `${sec}s`;
+
+      cdTimer20 = setInterval(() => {
+        sec--;
+        if (sec <= 0) {
+          clearInterval(cdTimer20);
+          b.dataset.cd = '0';
+          b.className = 'w-36 h-11 rounded-xl bg-gradient-to-b from-rose-500 to-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center transition-all duration-300';
+          b.innerText = '🔥 피버 타임 발동';
+        } else {
+          b.innerText = `${sec}s`;
+        }
+      }, 850);
+    }
+
+    // #21 잠금 덜그럭 & 열쇠 해금 (클릭할 때마다 자물쇠 흔들림 + 기존 '제2창고 잠김' 텍스트 강조)
+    function clickLocked21(e) {
+      const b = document.getElementById('btn-21');
+      if (b.dataset.unlocked === '1') {
+        playSound('pop');
+        burst(e, ['#10b981', '#fde047'], 14);
+        return;
+      }
+      playSound('rattle');
+      triggerRattleAnim(document.getElementById('btn-21-lock'));
+      triggerLockTextPulse(document.getElementById('btn-21-text'));
+    }
+
+    function unlockBtn21(e) {
+      const b = document.getElementById('btn-21');
+      if (b.dataset.unlocked === '1') return;
+      b.dataset.unlocked = '1';
+      playSound('unlock');
+      burst({ currentTarget: b }, ['#facc15', '#10b981', '#ffffff'], 24);
+
+      const lockSvg = document.getElementById('btn-21-lock');
+      lockSvg.classList.add('padlock-open');
+      lockSvg.querySelector('path').setAttribute('stroke', '#fde047');
+      lockSvg.querySelector('rect').setAttribute('fill', '#fbbf24');
+
+      b.className = 'px-4 h-11 rounded-xl bg-emerald-600 text-white border-2 border-emerald-400 font-black text-xs shadow-lg flex items-center gap-2 transition-colors duration-300';
+      document.getElementById('btn-21-text').innerText = '제2창고 개방됨!';
+
+      const keyBtn = document.getElementById('btn-21-key');
+      keyBtn.className = 'w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm border border-emerald-300 flex items-center justify-center transition';
+      keyBtn.innerText = '✓';
+    }
+
+    /* ========================================================
+       5. 전체 초기화
+       ======================================================== */
+    function resetAllButtons() {
+      playSound('pop');
+      // #01
+      const b1 = document.getElementById('btn-01');
+      b1.dataset.done = '0';
+      b1.className = 'px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs shadow-md transition-all duration-300';
+      b1.innerText = '이력서 고용하기';
+      // #03
+      clearTimeout(holdTimer03);
+      const b3 = document.getElementById('btn-03');
+      b3.dataset.unlocked = '0';
+      b3.className = 'relative overflow-hidden w-44 h-11 rounded-2xl bg-[#47301e] text-amber-100 font-black text-xs shadow-md transition-all duration-300 flex items-center justify-center';
+      b3.innerHTML = `
+        <span id="btn-03-fill" class="absolute inset-y-0 left-0 w-0 bg-amber-500 transition-none"></span>
+        <span id="btn-03-label" class="relative z-10 flex items-center gap-1.5">
+          <svg id="btn-03-lock" class="w-4 h-4 shrink-0 overflow-visible" viewBox="0 0 24 24" fill="none">
+            <path class="padlock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#fbbf24" stroke-width="2.4" stroke-linecap="round"/>
+            <rect x="5" y="11" width="14" height="10" rx="2.5" fill="#f59e0b" stroke="#78350f" stroke-width="1.5"/>
+            <circle cx="12" cy="15.5" r="1.3" fill="#451a03"/>
+            <path d="M12 16.5v2" stroke="#451a03" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span id="btn-03-text">꾹 눌러 해금 (500G)</span>
+        </span>`;
+      // #05
+      const b5 = document.getElementById('btn-05');
+      b5.dataset.sealed = '0';
+      b5.className = 'relative overflow-hidden w-40 h-11 rounded-xl bg-[#c68b53] hover:bg-[#b57a43] text-white font-black text-xs shadow-md border-2 border-[#8c5828] transition-all duration-300';
+      document.getElementById('btn-05-tape').classList.add('hidden');
+      document.getElementById('btn-05-label').innerText = '📦 포장 완료 처리';
+      // #06
+      lv06 = 1;
+      document.getElementById('btn-06-lv').innerText = 'LV.1';
+      // #07
+      const b7 = document.getElementById('btn-07');
+      b7.dataset.signed = '0';
+      b7.className = 'w-40 h-10 rounded-xl bg-teal-700 hover:bg-teal-600 text-white font-black text-xs shadow-md flex items-center justify-center transition-all duration-300';
+      document.getElementById('btn-07-svg').classList.add('hidden');
+      document.getElementById('btn-07-path').classList.remove('drawn');
+      const l7 = document.getElementById('btn-07-label');
+      l7.classList.remove('hidden');
+      l7.innerText = '✒️ 계약서 서명하기';
+      // #08, #09, #10, #12, #14, #15, #16, #17, #18, #19
+      speedIdx08 = -1; runBtn08();
+      open09 = true; runBtn09();
+      fill10 = 100; runBtn10();
+      resetSplit12();
+      beltOn14 = true; runBtn14();
+      document.getElementById('btn-15').classList.remove('is-flipped');
+      checked16 = true; runBtn16();
+      slipOut17 = true; runBtn17();
+      switch18 = true; runBtn18();
+      open19 = true; runBtn19();
+      // #20
+      clearInterval(cdTimer20);
+      const b20 = document.getElementById('btn-20');
+      b20.dataset.cd = '0';
+      b20.className = 'w-36 h-11 rounded-xl bg-gradient-to-b from-rose-500 to-rose-700 text-white font-black text-xs shadow-md flex items-center justify-center transition-all duration-300';
+      b20.innerText = '🔥 피버 타임 발동';
+      // #21
+      const b21 = document.getElementById('btn-21');
+      b21.dataset.unlocked = '0';
+      b21.className = 'px-3.5 h-11 rounded-xl bg-stone-700 text-stone-200 border-2 border-stone-800 font-black text-xs shadow-md flex items-center gap-2 transition-all duration-300';
+      b21.innerHTML = `
+        <svg id="btn-21-lock" class="w-5 h-5 shrink-0 overflow-visible" viewBox="0 0 24 24" fill="none">
+          <path class="padlock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#cbd5e1" stroke-width="2.4" stroke-linecap="round"/>
+          <rect x="5" y="11" width="14" height="10" rx="2.5" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+          <circle cx="12" cy="15.5" r="1.3" fill="#1e293b"/>
+          <path d="M12 16.5v2" stroke="#1e293b" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span id="btn-21-text">제2창고 잠김</span>`;
+      const k21 = document.getElementById('btn-21-key');
+      k21.className = 'w-11 h-11 rounded-xl bg-amber-500 hover:bg-amber-400 text-[#2b1605] font-black text-base shadow-md border-b-2 border-amber-700 flex items-center justify-center active:scale-95 transition';
+      k21.innerText = '🔑';
+    }
+
+    window.onload = function () {
+      animateFx();
+    };
+  </script>
+</body>
+</html>
