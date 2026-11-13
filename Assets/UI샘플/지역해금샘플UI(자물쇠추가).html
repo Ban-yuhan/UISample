@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>쿼터뷰 타이쿤 - 필드 해금 애니메이션 샘플</title>
+  <title>쿼터뷰 타이쿤 필드해금 UI & 애니메이션 쇼케이스</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
-      touch-action: none;
+      -webkit-touch-callout: none;
     }
     html, body {
       margin: 0;
@@ -21,30 +21,49 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #d6e594;
+      background-color: #D7E5B2;
       font-family: 'Noto Sans KR', sans-serif;
     }
-    .font-game {
+    .game-font {
       font-family: 'Jua', 'Noto Sans KR', sans-serif;
     }
     canvas {
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none;
     }
-    /* 캐주얼 타이쿤 스타일 버튼 효과 */
-    .tycoon-btn {
-      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.15s, box-shadow 0.15s;
+    .mode-btn {
+      transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .tycoon-btn:active {
-      transform: translateY(2px) scale(0.97);
+    .mode-btn:active {
+      transform: scale(0.94);
     }
-    .mode-active {
-      background-color: #74c721 !important;
-      color: #ffffff !important;
-      border-color: #3b2314 !important;
-      box-shadow: 0 4px 0 #3b2314 !important;
+    .mode-btn.active {
+      background: linear-gradient(180deg, #8CE02C 0%, #68B817 100%);
+      color: #FFFFFF;
+      border-color: #3B2314;
+      box-shadow: 0 4px 0 #3B2314, 0 8px 16px rgba(59, 35, 20, 0.25);
       transform: translateY(-2px);
+    }
+    .mode-btn:not(.active) {
+      background: #FAF5EB;
+      color: #3B2314;
+      border-color: #3B2314;
+      box-shadow: 0 3px 0 #3B2314;
+    }
+    .mode-btn:not(.active):hover {
+      background: #FFFDF8;
+      transform: translateY(-1px);
+    }
+    .action-btn {
+      transition: all 0.15s ease;
+      border: 2.5px solid #3B2314;
+      box-shadow: 0 3px 0 #3B2314;
+    }
+    .action-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #3B2314;
     }
   </style>
 </head>
@@ -53,1543 +72,1692 @@
   <!-- 메인 게임 캔버스 -->
   <canvas id="gameCanvas"></canvas>
 
-  <!-- 상단 상태 & 타이틀 HUD -->
-  <div class="pointer-events-none fixed top-0 left-0 right-0 z-10 flex flex-col items-center pt-3 px-3 sm:pt-5">
-    <div class="pointer-events-auto flex flex-wrap items-center justify-between gap-2 w-full max-w-4xl bg-[#fcf6e8]/95 backdrop-blur-sm border-[3px] border-[#3b2314] rounded-2xl px-4 py-2.5 shadow-[0_4px_0_#3b2314]">
-      <div class="flex items-center gap-2.5">
-        <span class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-[#ffd026] border-2 border-[#3b2314] text-base shadow-inner">🏗️</span>
-        <div>
-          <h1 class="font-game text-base sm:text-lg text-[#3b2314] leading-tight">필드 해금 UI &amp; 연출 샘플</h1>
-          <p id="statusHint" class="text-[11px] sm:text-xs font-bold text-[#6e503b]">
-            바닥 클릭 / WASD / 방향키로 이동해 <span class="text-[#569e12]">[새 구역]</span> 발판 위에 서세요!
-          </p>
-        </div>
-      </div>
-
+  <!-- 상단 HUD 바 -->
+  <div class="fixed top-0 left-0 right-0 z-20 pointer-events-none p-3 sm:p-4 flex flex-wrap items-start justify-between gap-2">
+    <!-- 좌측: 상태 및 조작 안내 카드 -->
+    <div class="pointer-events-auto bg-[#FAF5EB]/95 backdrop-blur-sm border-[3px] border-[#3B2314] rounded-2xl px-3.5 py-2.5 shadow-[0_4px_0_#3B2314] max-w-xs sm:max-w-sm">
       <div class="flex items-center gap-2">
-        <!-- 현재 선택된 연출 배지 -->
-        <span id="currentModeBadge" class="hidden md:inline-flex items-center px-3 py-1 rounded-full bg-[#fce6ad] border-2 border-[#3b2314] text-xs font-extrabold text-[#3b2314]">
-          연출: 타일 파도형식
-        </span>
-        <!-- 사운드 토글 -->
-        <button id="soundToggleBtn" title="효과음 켜기/끄기"
-          class="tycoon-btn flex items-center justify-center w-9 h-9 rounded-xl bg-[#fffaf0] border-2 border-[#3b2314] text-[#3b2314] shadow-[0_3px_0_#3b2314] text-sm font-bold cursor-pointer">
-          🔊
-        </button>
+        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#7AC71E] text-white text-xs font-black border-2 border-[#3B2314]">!</span>
+        <h1 class="game-font text-base sm:text-lg text-[#3B2314] tracking-tight">필드 해금 애니메이션 프로토타입</h1>
+      </div>
+      <p class="text-[11px] sm:text-xs text-[#6A4A35] font-medium mt-1 leading-relaxed">
+        <span class="font-bold text-[#3B2314]">WASD / 방향키</span> 또는 <span class="font-bold text-[#3B2314]">화면 클릭·드래그</span>로 캐릭터를 이동해 <span class="inline-block px-1.5 py-0.2 bg-[#F7E3BA] rounded font-bold text-[#3B2314]">새 구역</span> 발판 위에 서세요!
+      </p>
+      <div class="mt-2 flex items-center gap-2 text-xs">
+        <div class="flex items-center gap-1.5 bg-[#F7E3BA] border-2 border-[#3B2314] rounded-full px-2.5 py-0.5 font-extrabold text-[#3B2314]">
+          <span>💵</span>
+          <span id="hudCashText">보유 자금: ∞</span>
+        </div>
+        <div id="statusBadge" class="px-2.5 py-0.5 rounded-full bg-[#FFE8A3] border-2 border-[#3B2314] font-bold text-[#3B2314]">
+          대기 중 (미해금)
+        </div>
       </div>
     </div>
 
-    <!-- 플로팅 토스트 알림 -->
-    <div id="toastBanner"
-      class="mt-2.5 px-4 py-1.5 rounded-full bg-[#3b2314] text-[#fcf6e8] text-xs sm:text-sm font-bold shadow-lg opacity-0 -translate-y-2 transition-all duration-300 pointer-events-none">
-      안내 메시지
+    <!-- 우측: 빠른 테스트 & 리셋 & HTML 저장 컨트롤 -->
+    <div class="pointer-events-auto flex flex-wrap items-center gap-2">
+      <button id="btnInstantUnlock" class="action-btn bg-[#FFD028] hover:bg-[#FFDA4D] text-[#3B2314] font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer">
+        <span>⚡</span>
+        <span>즉시 해금 연출</span>
+      </button>
+      <button id="btnReset" class="action-btn bg-[#FAF5EB] hover:bg-white text-[#3B2314] font-extrabold text-xs sm:text-sm px-3.5 py-2 rounded-xl flex items-center gap-1.5 cursor-pointer">
+        <span>🔄</span>
+        <span>다시 잠그기</span>
+      </button>
+      <button id="btnSound" class="action-btn bg-[#FAF5EB] hover:bg-white text-[#3B2314] font-extrabold text-xs sm:text-sm px-2.5 py-2 rounded-xl cursor-pointer" title="효과음 켜기/끄기">
+        🔊
+      </button>
+      <button id="btnDownload" class="action-btn bg-[#3B2314] hover:bg-[#52321E] text-[#FAF5EB] font-bold text-xs sm:text-sm px-3 py-2 rounded-xl flex items-center gap-1 cursor-pointer" title="현재 HTML 파일 저장">
+        <span>💾</span>
+        <span class="hidden sm:inline">HTML 저장</span>
+      </button>
     </div>
   </div>
 
-  <!-- 하단 컨트롤 & 5종 애니메이션 선택 패널 -->
-  <div class="pointer-events-none fixed bottom-0 left-0 right-0 z-10 flex flex-col items-center pb-3 px-2 sm:pb-5 sm:px-4">
-    <div class="pointer-events-auto w-full max-w-4xl bg-[#fcf6e8]/95 backdrop-blur-sm border-[3px] border-[#3b2314] rounded-3xl p-2.5 sm:p-3.5 shadow-[0_6px_0_#3b2314] flex flex-col gap-2.5">
-      
-      <!-- 1줄: 5종 해금 애니메이션 선택 버튼 -->
-      <div class="flex items-center justify-between gap-1.5 overflow-x-auto pb-0.5">
-        <span class="hidden sm:inline-block shrink-0 text-xs font-black text-[#3b2314] bg-[#fce6ad] border-2 border-[#3b2314] rounded-xl px-2.5 py-1.5 mr-1">
-          해금 연출
-        </span>
-        <div id="modeButtons" class="grid grid-cols-5 gap-1.5 sm:gap-2 w-full">
-          <button data-mode="wave"
-            class="mode-btn mode-active tycoon-btn py-2 px-1 sm:px-2.5 rounded-xl bg-[#fffaf0] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-[11px] sm:text-xs font-extrabold cursor-pointer whitespace-nowrap">
-            타일 파도형식
-          </button>
-          <button data-mode="expand"
-            class="mode-btn tycoon-btn py-2 px-1 sm:px-2.5 rounded-xl bg-[#fffaf0] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-[11px] sm:text-xs font-extrabold cursor-pointer whitespace-nowrap">
-            필드확장
-          </button>
-          <button data-mode="ripple"
-            class="mode-btn tycoon-btn py-2 px-1 sm:px-2.5 rounded-xl bg-[#fffaf0] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-[11px] sm:text-xs font-extrabold cursor-pointer whitespace-nowrap">
-            원형 확산
-          </button>
-          <button data-mode="drop"
-            class="mode-btn tycoon-btn py-2 px-1 sm:px-2.5 rounded-xl bg-[#fffaf0] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-[11px] sm:text-xs font-extrabold cursor-pointer whitespace-nowrap">
-            필드 낙하
-          </button>
-          <button data-mode="bounce"
-            class="mode-btn tycoon-btn py-2 px-1 sm:px-2.5 rounded-xl bg-[#fffaf0] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-[11px] sm:text-xs font-extrabold cursor-pointer whitespace-nowrap">
-            튕김
-          </button>
-        </div>
+  <!-- 하단: 5종 해금 애니메이션 선택 컨트롤 바 -->
+  <div class="fixed bottom-0 left-0 right-0 z-20 pointer-events-none p-3 sm:p-5 flex flex-col items-center">
+    <div class="pointer-events-auto bg-[#FAF5EB]/95 backdrop-blur-md border-[3px] border-[#3B2314] rounded-3xl p-2.5 sm:p-3 shadow-[0_6px_0_#3B2314] max-w-full">
+      <div class="flex items-center justify-between px-2 mb-2">
+        <span class="text-[11px] sm:text-xs font-extrabold text-[#6A4A35] tracking-wide">✨ 해금 애니메이션 스타일 선택 (5종)</span>
+        <span id="modeDescText" class="text-[11px] sm:text-xs font-bold text-[#4D8A10]">소단위 타일이 물결치듯 생성되며 해금</span>
       </div>
-
-      <!-- 2줄: 빠른 테스트(자동 이동) & 초기화 버튼 -->
-      <div class="flex items-center justify-between gap-2 pt-1 border-t-2 border-[#e8dcc4]">
-        <div class="flex items-center gap-2 text-[11px] sm:text-xs font-bold text-[#6e503b]">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-[#74c721] border border-[#3b2314]"></span>
-          <span id="stateLabel">상태: 미해금 (발판 대기중)</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button id="autoWalkBtn"
-            class="tycoon-btn flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#ffd026] hover:bg-[#ffda4d] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-xs sm:text-sm font-black cursor-pointer">
-            <span>🏃</span>
-            <span>발판으로 자동 이동</span>
-          </button>
-          <button id="resetBtn"
-            class="tycoon-btn flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-[#ff8a75] hover:bg-[#ff9c8a] text-[#3b2314] border-2 border-[#3b2314] shadow-[0_3px_0_#3b2314] text-xs sm:text-sm font-black cursor-pointer">
-            <span>🔄</span>
-            <span>초기화</span>
-          </button>
-        </div>
+      <div class="flex flex-wrap justify-center gap-1.5 sm:gap-2" id="modeButtonsContainer">
+        <button data-mode="wave" class="mode-btn active border-[2.5px] rounded-2xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 cursor-pointer">
+          <span>🌊</span>
+          <span>1. 타일 파도형식</span>
+        </button>
+        <button data-mode="expand" class="mode-btn border-[2.5px] rounded-2xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 cursor-pointer">
+          <span>↔️</span>
+          <span>2. 필드확장</span>
+        </button>
+        <button data-mode="circle" class="mode-btn border-[2.5px] rounded-2xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 cursor-pointer">
+          <span>⭕</span>
+          <span>3. 원형 확산</span>
+        </button>
+        <button data-mode="drop" class="mode-btn border-[2.5px] rounded-2xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 cursor-pointer">
+          <span>⬇️</span>
+          <span>4. 필드 낙하</span>
+        </button>
+        <button data-mode="bounce" class="mode-btn border-[2.5px] rounded-2xl px-3 sm:px-4 py-2 text-xs sm:text-sm font-extrabold flex items-center gap-1.5 cursor-pointer">
+          <span>🫧</span>
+          <span>5. 튕김</span>
+        </button>
       </div>
-
     </div>
+  </div>
+
+  <!-- 토스트 메시지 박스 (alert 대체용) -->
+  <div id="toastBox" class="fixed top-20 left-1/2 -translate-x-1/2 z-30 pointer-events-none opacity-0 transition-opacity duration-200 bg-[#3B2314] text-[#FAF5EB] text-xs sm:text-sm font-bold px-4 py-2 rounded-full shadow-lg">
+    안내 메시지
   </div>
 
   <script>
     /**
-     * ============================================================================
-     * 쿼터뷰(Isometric) 캐주얼 타이쿤 필드 해금 UI & 5종 애니메이션 프로토타입
-     * ============================================================================
+     * 쿼터뷰(아이소메트릭) 타이쿤 게임 필드해금 UI & 5종 애니메이션 프로토타입
+     * - 60fps HTML5 Canvas 기반 아이소메트릭 렌더링
+     * - 해금 발판 게이지 충전 + 지폐 비행 파티클
+     * - 자물쇠 걸이(Shackle) 열림 및 소멸 연출
+     * - 5가지 해금 애니메이션 (타일 파도 / 필드 확장 / 원형 확산 / 필드 낙하 / 튕김)
      */
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
-    // UI DOM 요소 참조
-    const statusHintEl = document.getElementById('statusHint');
-    const stateLabelEl = document.getElementById('stateLabel');
-    const currentModeBadgeEl = document.getElementById('currentModeBadge');
-    const toastBannerEl = document.getElementById('toastBanner');
-    const autoWalkBtn = document.getElementById('autoWalkBtn');
-    const resetBtn = document.getElementById('resetBtn');
-    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    // UI 요소 참조
+    const statusBadge = document.getElementById('statusBadge');
+    const modeDescText = document.getElementById('modeDescText');
+    const toastBox = document.getElementById('toastBox');
+    const btnInstantUnlock = document.getElementById('btnInstantUnlock');
+    const btnReset = document.getElementById('btnReset');
+    const btnSound = document.getElementById('btnSound');
+    const btnDownload = document.getElementById('btnDownload');
     const modeButtons = document.querySelectorAll('.mode-btn');
 
-    // 애니메이션 모드 이름 매핑
-    const MODE_NAMES = {
-      wave: '타일 파도형식',
-      expand: '필드확장',
-      ripple: '원형 확산',
-      drop: '필드 낙하',
-      bounce: '튕김'
+    // 모드별 설명 문구
+    const MODE_DESCRIPTIONS = {
+      wave: '소단위 타일이 물결치듯 순차적으로 튀어오르며 해금',
+      expand: '기존 필드의 경계면이 해금 구역 끝까지 주욱 늘어나며 해금',
+      circle: '플레이어 위치 기준 원형 파장이 퍼지며 원형 선에 맞춰 필드가 드러남',
+      drop: '미해금 구역 크기의 거대한 필드가 하늘에서 낙하해 쿵! 착지',
+      bounce: '구역 중앙에서 필드가 탄성 있게 튕겨 나오듯 팝업되며 해금'
     };
 
-    // ----------------------------------------------------------------------------
-    // 1. Web Audio API 기반 경쾌한 캐주얼 게임 효과음 합성기 (외부 파일 불필요)
-    // ----------------------------------------------------------------------------
-    class SoundFX {
-      constructor() {
-        this.ctx = null;
-        this.enabled = true;
+    // 사운드 효과 (Web Audio API 절차적 합성 - 외부 파일 불필요)
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) audioCtx = new AudioContext();
       }
-
-      init() {
-        if (!this.ctx) {
-          const AudioCtx = window.AudioContext || window.webkitAudioContext;
-          if (AudioCtx) this.ctx = new AudioCtx();
-        }
-        if (this.ctx && this.ctx.state === 'suspended') {
-          this.ctx.resume();
-        }
-      }
-
-      playTone(freq, type = 'sine', duration = 0.1, volume = 0.12, delay = 0, endFreq = null) {
-        if (!this.enabled) return;
-        this.init();
-        if (!this.ctx) return;
-
-        const now = this.ctx.currentTime + delay;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, now);
-        if (endFreq) {
-          osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
-        }
-
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(volume, now + 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + duration + 0.02);
-      }
-
-      playCoinTick(progress) {
-        const pitch = 520 + progress * 440;
-        this.playTone(pitch, 'triangle', 0.07, 0.08, 0, pitch * 1.15);
-      }
-
-      playLockPop() {
-        this.playTone(380, 'sine', 0.09, 0.16, 0, 760);
-        this.playTone(980, 'triangle', 0.14, 0.14, 0.07, 1320);
-      }
-
-      playUnlockFanfare() {
-        const notes = [523.25, 659.25, 783.99, 1046.5];
-        notes.forEach((n, idx) => {
-          this.playTone(n, 'triangle', 0.22, 0.14, idx * 0.065);
-        });
-      }
-
-      playTilePop(idx = 0) {
-        const pitch = 420 + (idx % 8) * 35;
-        this.playTone(pitch, 'sine', 0.08, 0.06, 0, pitch * 1.25);
-      }
-
-      playHeavyThud() {
-        this.playTone(150, 'sine', 0.24, 0.25, 0, 42);
-        this.playTone(95, 'triangle', 0.2, 0.2, 0.02, 35);
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
     }
 
-    const sfx = new SoundFX();
+    function playTone(freq, type = 'sine', duration = 0.1, vol = 0.08, slideTo = null) {
+      if (!soundEnabled) return;
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (slideTo) {
+          osc.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + duration);
+        }
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {
+        // 오디오 차단 환경 무시
+      }
+    }
 
-    // ----------------------------------------------------------------------------
-    // 2. 쿼터뷰(Isometric) 좌표계 & 월드 설정
-    // ----------------------------------------------------------------------------
-    // 월드 그리드 좌표계:
-    // - 기존 해금된 필드: x in [0, 4], y in [0, 4] (4x4 타일)
-    // - 미해금 구역:      x in [4, 8], y in [0, 4] (기존 필드 우하단 변에 인접한 4x4 구역)
-    // - 해금 발판:        기존 필드 내부 경계선 앞쪽 x in [2.35, 3.75], y in [1.3, 2.7]
-    const ISO = {
-      tileW: 96,       // 아이소메트릭 1유닛 가로 대각선 길이 (화면 크기에 맞춰 동적 스케일링)
-      tileH: 48,       // 아이소메트릭 1유닛 세로 대각선 길이 (2:1 비율)
-      thickness: 16,   // 플랫폼 3D 측면 두께
+    function playCashTick(progress) {
+      const baseFreq = 460 + progress * 420;
+      playTone(baseFreq, 'triangle', 0.07, 0.06, baseFreq * 1.18);
+    }
+
+    function playLockPopSound() {
+      playTone(520, 'sine', 0.12, 0.12, 880);
+      setTimeout(() => playTone(780, 'triangle', 0.16, 0.1, 1180), 90);
+    }
+
+    function playUnlockFanfare(mode) {
+      if (mode === 'drop') {
+        setTimeout(() => playTone(140, 'sawtooth', 0.28, 0.14, 48), 320);
+      } else {
+        playTone(523.25, 'triangle', 0.16, 0.1);
+        setTimeout(() => playTone(659.25, 'triangle', 0.16, 0.1), 80);
+        setTimeout(() => playTone(783.99, 'triangle', 0.24, 0.11), 160);
+        setTimeout(() => playTone(1046.5, 'sine', 0.35, 0.12), 250);
+      }
+    }
+
+    // 토스트 알림
+    let toastTimer = null;
+    function showToast(msg) {
+      toastBox.textContent = msg;
+      toastBox.classList.remove('opacity-0');
+      toastBox.classList.add('opacity-100');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastBox.classList.remove('opacity-100');
+        toastBox.classList.add('opacity-0');
+      }, 1800);
+    }
+
+    // =========================================================================
+    // 아이소메트릭 월드 좌표 및 설정
+    // =========================================================================
+    const BASE_TILE_W = 46; // 아이소메트릭 반폭
+    const BASE_TILE_H = 23; // 아이소메트릭 반높이 (2:1 쿼터뷰)
+    const SLAB_THICKNESS = 18; // 지형 플랫폼 두께
+
+    // 월드 영역 정의 (그리드 단위)
+    // 기존 해금된 필드: x [-4, 1], y [-2.5, 2.5] (5 x 5 크기)
+    const UNLOCKED_RECT = { x1: -4, y1: -2.5, x2: 1, y2: 2.5 };
+    // 새로 해금할 필드: x [1, 6], y [-2.5, 2.5] (5 x 5 크기)
+    const LOCKED_RECT = { x1: 1, y1: -2.5, x2: 6, y2: 2.5 };
+
+    // 해금 발판 위치 및 크기 (기존 필드 우측 경계 바로 안쪽)
+    const PAD_CONFIG = {
+      x: -0.1,
+      y: 0,
+      size: 1.65, // 월드 단위 정사각형
+      cost: 200
+    };
+
+    // 게임 상태
+    const state = {
+      width: 0,
+      height: 0,
+      dpr: 1,
       scale: 1,
       originX: 0,
-      originY: 0
+      originY: 0,
+
+      // 선택된 애니메이션 모드: 'wave' | 'expand' | 'circle' | 'drop' | 'bounce'
+      animMode: 'wave',
+
+      // 해금 진행 상태: 'locked' | 'unlocking_lock' | 'animating_field' | 'unlocked'
+      unlockPhase: 'locked',
+      padProgress: 0, // 0 ~ 1
+      cashSoundAccum: 0,
+      cashParticleAccum: 0,
+
+      // 자물쇠 애니메이션 타이머
+      lockTimer: 0,
+      shackleLift: 0, // 자물쇠 걸이 위로 열리는 높이
+      lockScale: 1,
+      lockAlpha: 1,
+
+      // 필드 해금 애니메이션 타이머 & 파라미터
+      fieldAnimTimer: 0,
+      fieldAnimDuration: 1.15,
+      circleOrigin: { x: -0.1, y: 0 }, // 원형 확산 시작점 (플레이어 위치)
+      cameraShake: 0,
+
+      // 플레이어 상태
+      player: {
+        x: -2.2,
+        y: 0.4,
+        targetX: null,
+        targetY: null,
+        speed: 3.6,
+        walkCycle: 0,
+        facing: 1, // 1: 우측, -1: 좌측
+        radius: 0.32
+      },
+
+      // 키보드 입력
+      keys: {},
+
+      // 시각 이펙트 파티클 & 플로팅 텍스트
+      particles: [],
+      floatingTexts: [],
+      ripples: []
     };
 
-    const EXISTING_FIELD = { minX: 0, maxX: 4, minY: 0, maxY: 4 };
-    const LOCKED_ZONE    = { minX: 4, maxX: 8, minY: 0, maxY: 4 };
+    // 화면 리사이즈 및 반응형 스케일 계산
+    function resizeCanvas() {
+      state.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      state.width = window.innerWidth;
+      state.height = window.innerHeight;
+      canvas.width = Math.floor(state.width * state.dpr);
+      canvas.height = Math.floor(state.height * state.dpr);
 
-    // 해금 발판 영역 (월드 좌표 정사각형 -> 아이소메트릭 마름모 카드로 투영됨)
-    const UNLOCK_PAD = {
-      x: 2.35,
-      y: 1.25,
-      size: 1.5,
-      cost: 200,
-      progress: 0,        // 0.0 ~ 1.0
-      fillDuration: 1.55, // 완충까지 걸리는 시간(초)
-      coinEmitTimer: 0,
-      scaleAnim: 1,
-      visible: true,
-      alpha: 1
-    };
+      // 전체 월드(x: -4..6 => 폭 10, y: -2.5..2.5 => 폭 5)가 화면에 예쁘게 들어오도록 스케일 조정
+      const minDim = Math.min(state.width, state.height * 1.25);
+      state.scale = Math.max(0.62, Math.min(1.38, minDim / 760));
 
-    // 자물쇠 상태 머신
-    const PADLOCK = {
-      worldX: (LOCKED_ZONE.minX + LOCKED_ZONE.maxX) / 2, // 6.0
-      worldY: (LOCKED_ZONE.minY + LOCKED_ZONE.maxY) / 2, // 2.0
-      state: 'locked', // 'locked' | 'opening' | 'vanishing' | 'gone'
-      timer: 0,
-      shackleLift: 0,  // 0 -> 1 (걸이가 위로 열리는 정도)
-      shackleTilt: 0,
-      scale: 1,
-      alpha: 1
-    };
-
-    // 필드 해금 애니메이션 상태
-    const UNLOCK_ANIM = {
-      mode: 'wave',       // 'wave' | 'expand' | 'ripple' | 'drop' | 'bounce'
-      phase: 'locked',    // 'locked' | 'padlock_seq' | 'field_anim' | 'unlocked'
-      timer: 0,
-      duration: 1.2,
-      rippleOrigin: { x: 3.1, y: 2.0 },
-      subTiles: []        // 4x4 = 16개 소단위 타일 상태
-    };
-
-    // 플레이어 캐릭터 상태
-    const PLAYER = {
-      x: 1.6,
-      y: 2.2,
-      targetX: null,
-      targetY: null,
-      speed: 3.6,
-      facingX: 1,
-      facingY: 0,
-      walkCycle: 0,
-      isMoving: false,
-      onPad: false
-    };
-
-    // 파티클 & 화면 흔들림
-    let particles = [];
-    let cameraShake = { time: 0, intensity: 0 };
-    const keysPressed = {};
-
-    // ----------------------------------------------------------------------------
-    // 3. 좌표 변환 헬퍼 (World <-> Screen)
-    // ----------------------------------------------------------------------------
-    function worldToScreen(wx, wy, wz = 0) {
-      const hw = (ISO.tileW * ISO.scale) * 0.5;
-      const hh = (ISO.tileH * ISO.scale) * 0.5;
-      const sx = ISO.originX + (wx - wy) * hw;
-      const sy = ISO.originY + (wx + wy) * hh - wz * ISO.scale;
-      return { x: sx, y: sy };
+      // 월드 중심(x = 1.0, y = 0.0)이 화면 중앙에 오도록 원점 설정
+      const worldCenterX = 1.0;
+      const worldCenterY = 0.0;
+      const tw = BASE_TILE_W * state.scale;
+      const th = BASE_TILE_H * state.scale;
+      state.originX = state.width * 0.5 - (worldCenterX - worldCenterY) * tw;
+      state.originY = state.height * 0.49 - (worldCenterX + worldCenterY) * th;
     }
 
-    function screenToWorld(sx, sy) {
-      const hw = (ISO.tileW * ISO.scale) * 0.5;
-      const hh = (ISO.tileH * ISO.scale) * 0.5;
-      const dx = (sx - ISO.originX) / hw;
-      const dy = (sy - ISO.originY) / hh;
-      const wx = (dx + dy) * 0.5;
-      const wy = (dy - dx) * 0.5;
-      return { x: wx, y: wy };
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // =========================================================================
+    // 좌표 변환 유틸리티 (World <-> Screen)
+    // =========================================================================
+    function isoToScreen(wx, wy, wz = 0) {
+      const tw = BASE_TILE_W * state.scale;
+      const th = BASE_TILE_H * state.scale;
+      return {
+        x: state.originX + (wx - wy) * tw,
+        y: state.originY + (wx + wy) * th - wz * state.scale
+      };
     }
 
-    // ----------------------------------------------------------------------------
-    // 4. 서브 타일 초기화 & 시뮬레이션 리셋
-    // ----------------------------------------------------------------------------
-    function buildSubTiles() {
-      const tiles = [];
-      for (let gx = LOCKED_ZONE.minX; gx < LOCKED_ZONE.maxX; gx++) {
-        for (let gy = LOCKED_ZONE.minY; gy < LOCKED_ZONE.maxY; gy++) {
-          // 타일 파도형식용 대각선 거리 인덱스 (0 ~ 6)
-          const waveOrder = (gx - LOCKED_ZONE.minX) + (gy - LOCKED_ZONE.minY);
-          tiles.push({
-            gx,
-            gy,
-            cx: gx + 0.5,
-            cy: gy + 0.5,
-            waveOrder,
-            progress: 0,
-            popped: false
-          });
-        }
-      }
-      UNLOCK_ANIM.subTiles = tiles;
+    function screenToIso(sx, sy) {
+      const tw = BASE_TILE_W * state.scale;
+      const th = BASE_TILE_H * state.scale;
+      const dx = (sx - state.originX) / tw;
+      const dy = (sy - state.originY) / th;
+      return {
+        x: (dx + dy) * 0.5,
+        y: (dy - dx) * 0.5
+      };
     }
 
-    let toastTimeout = null;
-    function showToast(msg) {
-      toastBannerEl.textContent = msg;
-      toastBannerEl.classList.remove('opacity-0', '-translate-y-2');
-      toastBannerEl.classList.add('opacity-100', 'translate-y-0');
-      clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => {
-        toastBannerEl.classList.add('opacity-0', '-translate-y-2');
-        toastBannerEl.classList.remove('opacity-100', 'translate-y-0');
-      }, 2100);
+    // 이징(Easing) 함수 모음
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
     }
-
-    function resetSimulation(keepPlayerPos = false) {
-      UNLOCK_PAD.progress = 0;
-      UNLOCK_PAD.coinEmitTimer = 0;
-      UNLOCK_PAD.scaleAnim = 1;
-      UNLOCK_PAD.visible = true;
-      UNLOCK_PAD.alpha = 1;
-
-      PADLOCK.state = 'locked';
-      PADLOCK.timer = 0;
-      PADLOCK.shackleLift = 0;
-      PADLOCK.shackleTilt = 0;
-      PADLOCK.scale = 1;
-      PADLOCK.alpha = 1;
-
-      UNLOCK_ANIM.phase = 'locked';
-      UNLOCK_ANIM.timer = 0;
-      buildSubTiles();
-
-      particles = [];
-      cameraShake = { time: 0, intensity: 0 };
-
-      if (!keepPlayerPos) {
-        PLAYER.x = 1.5;
-        PLAYER.y = 2.1;
-        PLAYER.targetX = null;
-        PLAYER.targetY = null;
-      } else {
-        // 만약 플레이어가 새로 열렸던 구역(x >= 4)에 있다면 기존 구역으로 안전 이동
-        if (PLAYER.x > 3.7) {
-          PLAYER.x = 1.6;
-          PLAYER.y = 2.1;
-          PLAYER.targetX = null;
-          PLAYER.targetY = null;
-        }
-      }
-
-      updateHUDStatus();
+    function easeOutBack(t, s = 1.65) {
+      const c3 = s + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
     }
-
-    function updateHUDStatus() {
-      currentModeBadgeEl.textContent = `연출: ${MODE_NAMES[UNLOCK_ANIM.mode]}`;
-      if (UNLOCK_ANIM.phase === 'locked') {
-        stateLabelEl.textContent = '상태: 미해금 (발판 위에 서서 게이지 충전)';
-        statusHintEl.innerHTML = `바닥 클릭 / WASD / 방향키로 이동해 <span class="text-[#569e12]">[새 구역]</span> 발판 위에 서세요!`;
-      } else if (UNLOCK_ANIM.phase === 'padlock_seq') {
-        stateLabelEl.textContent = '상태: 자물쇠 해제 중...';
-        statusHintEl.innerHTML = `🔓 자물쇠가 열리고 있습니다!`;
-      } else if (UNLOCK_ANIM.phase === 'field_anim') {
-        stateLabelEl.textContent = `상태: [${MODE_NAMES[UNLOCK_ANIM.mode]}] 해금 연출 진행 중!`;
-        statusHintEl.innerHTML = `✨ <strong>${MODE_NAMES[UNLOCK_ANIM.mode]}</strong> 애니메이션 실행 중...`;
-      } else if (UNLOCK_ANIM.phase === 'unlocked') {
-        stateLabelEl.textContent = '상태: 구역 해금 완료! (새 구역 이동 가능)';
-        statusHintEl.innerHTML = `🎉 해금 완료! 새 구역을 걸어다니거나 다른 연출 버튼을 눌러 테스트해보세요.`;
-      }
-    }
-
-    // ----------------------------------------------------------------------------
-    // 5. UI 이벤트 바인딩
-    // ----------------------------------------------------------------------------
-    modeButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        sfx.init();
-        const selectedMode = btn.dataset.mode;
-        UNLOCK_ANIM.mode = selectedMode;
-
-        modeButtons.forEach(b => b.classList.remove('mode-active'));
-        btn.classList.add('mode-active');
-
-        // 이미 해금되었거나 진행 중이면 바로 재테스트 가능하도록 깔끔하게 초기화
-        if (UNLOCK_ANIM.phase !== 'locked') {
-          resetSimulation(true);
-          showToast(`[${MODE_NAMES[selectedMode]}] 모드로 초기화되었습니다!`);
-        } else {
-          updateHUDStatus();
-          showToast(`해금 연출 변경: ${MODE_NAMES[selectedMode]}`);
-        }
-        sfx.playTone(620, 'triangle', 0.08, 0.1);
-      });
-    });
-
-    autoWalkBtn.addEventListener('click', () => {
-      sfx.init();
-      if (UNLOCK_ANIM.phase !== 'locked') {
-        resetSimulation(true);
-      }
-      // 발판 정중앙으로 자동 이동 목적지 설정
-      PLAYER.targetX = UNLOCK_PAD.x + UNLOCK_PAD.size * 0.5;
-      PLAYER.targetY = UNLOCK_PAD.y + UNLOCK_PAD.size * 0.5;
-      sfx.playTone(540, 'sine', 0.08, 0.1, 0, 720);
-    });
-
-    resetBtn.addEventListener('click', () => {
-      sfx.init();
-      resetSimulation(false);
-      sfx.playTone(440, 'triangle', 0.1, 0.1, 0, 320);
-      showToast('미해금 상태로 초기화되었습니다.');
-    });
-
-    soundToggleBtn.addEventListener('click', () => {
-      sfx.enabled = !sfx.enabled;
-      soundToggleBtn.textContent = sfx.enabled ? '🔊' : '🔇';
-      if (sfx.enabled) {
-        sfx.init();
-        sfx.playTone(660, 'sine', 0.08, 0.1);
-      }
-    });
-
-    // 키보드 입력
-    window.addEventListener('keydown', (e) => {
-      keysPressed[e.key.toLowerCase()] = true;
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key) ||
-          ['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
-        PLAYER.targetX = null;
-        PLAYER.targetY = null;
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      keysPressed[e.key.toLowerCase()] = false;
-    });
-
-    // 포인터(마우스/터치) 클릭 및 드래그 이동
-    let isPointerDown = false;
-    function handlePointerMoveGoal(clientX, clientY) {
-      sfx.init();
-      const rect = canvas.getBoundingClientRect();
-      const sx = clientX - rect.left;
-      const sy = clientY - rect.top;
-      const wPos = screenToWorld(sx, sy);
-
-      // 현재 이동 가능한 구역 내로 클램핑
-      const maxAllowX = (UNLOCK_ANIM.phase === 'unlocked') ? LOCKED_ZONE.maxX - 0.25 : EXISTING_FIELD.maxX - 0.25;
-      const clampedX = Math.max(0.25, Math.min(maxAllowX, wPos.x));
-      const clampedY = Math.max(0.25, Math.min(EXISTING_FIELD.maxY - 0.25, wPos.y));
-
-      PLAYER.targetX = clampedX;
-      PLAYER.targetY = clampedY;
-
-      // 바닥 클릭 링 이펙트 생성
-      spawnGroundRing(clampedX, clampedY);
-    }
-
-    canvas.addEventListener('pointerdown', (e) => {
-      isPointerDown = true;
-      handlePointerMoveGoal(e.clientX, e.clientY);
-    });
-
-    canvas.addEventListener('pointermove', (e) => {
-      if (!isPointerDown) return;
-      handlePointerMoveGoal(e.clientX, e.clientY);
-    });
-
-    window.addEventListener('pointerup', () => {
-      isPointerDown = false;
-    });
-
-    // ----------------------------------------------------------------------------
-    // 6. 파티클 이펙트 생성기
-    // ----------------------------------------------------------------------------
-    function spawnGroundRing(wx, wy) {
-      particles.push({
-        type: 'ring',
-        wx, wy, wz: 1,
-        radius: 4,
-        maxRadius: 24,
-        life: 0.35,
-        maxLife: 0.35,
-        color: '#ffffff'
-      });
-    }
-
-    function spawnCashParticle() {
-      const padCenterX = UNLOCK_PAD.x + UNLOCK_PAD.size * 0.5;
-      const padCenterY = UNLOCK_PAD.y + UNLOCK_PAD.size * 0.5;
-      particles.push({
-        type: 'cash',
-        startX: PLAYER.x + (Math.random() - 0.5) * 0.25,
-        startY: PLAYER.y + (Math.random() - 0.5) * 0.25,
-        startZ: 34,
-        endX: padCenterX + (Math.random() - 0.5) * 0.3,
-        endY: padCenterY + (Math.random() - 0.5) * 0.3,
-        endZ: 4,
-        life: 0.32,
-        maxLife: 0.32,
-        rot: (Math.random() - 0.5) * 0.8
-      });
-    }
-
-    function spawnLockBurst(wx, wy) {
-      for (let i = 0; i < 18; i++) {
-        const angle = (Math.PI * 2 * i) / 18 + Math.random() * 0.2;
-        const speed = 1.4 + Math.random() * 2.4;
-        particles.push({
-          type: 'sparkle',
-          wx, wy,
-          wz: 28 + Math.random() * 14,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          vz: 45 + Math.random() * 55,
-          size: 4 + Math.random() * 5,
-          color: i % 2 === 0 ? '#ffd026' : '#ffffff',
-          life: 0.55 + Math.random() * 0.2,
-          maxLife: 0.75
-        });
-      }
-    }
-
-    function spawnDustCloud() {
-      // 필드 낙하 착지 시 테두리 주변 먼지 구름
-      for (let i = 0; i < 24; i++) {
-        const edge = i % 4;
-        let wx = LOCKED_ZONE.minX + Math.random() * 4;
-        let wy = LOCKED_ZONE.minY + Math.random() * 4;
-        if (edge === 0) wx = LOCKED_ZONE.minX;
-        if (edge === 1) wx = LOCKED_ZONE.maxX;
-        if (edge === 2) wy = LOCKED_ZONE.minY;
-        if (edge === 3) wy = LOCKED_ZONE.maxY;
-
-        particles.push({
-          type: 'dust',
-          wx, wy,
-          wz: 2,
-          vx: (wx - 6) * 0.65 + (Math.random() - 0.5) * 0.5,
-          vy: (wy - 2) * 0.65 + (Math.random() - 0.5) * 0.5,
-          vz: 12 + Math.random() * 18,
-          size: 8 + Math.random() * 8,
-          life: 0.55 + Math.random() * 0.25,
-          maxLife: 0.8
-        });
-      }
-    }
-
-    // ----------------------------------------------------------------------------
-    // 7. 이징(Easing) 수학 함수 모음
-    // ----------------------------------------------------------------------------
-    function easeOutBack(t) {
-      const c1 = 1.70158;
-      const c3 = c1 + 1;
-      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-    }
-
     function easeOutElastic(t) {
       if (t === 0 || t === 1) return t;
       const c4 = (2 * Math.PI) / 3;
       return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
     }
 
-    function easeOutCubic(t) {
-      return 1 - Math.pow(1 - t, 3);
+    // =========================================================================
+    // 입력 처리 (키보드 + 마우스/터치 클릭 및 드래그 이동)
+    // =========================================================================
+    window.addEventListener('keydown', (e) => {
+      state.keys[e.code] = true;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        state.player.targetX = null;
+        state.player.targetY = null;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      state.keys[e.code] = false;
+    });
+
+    let isPointerDown = false;
+    function handlePointerMoveToWorld(clientX, clientY, spawnRipple = false) {
+      initAudio();
+      const rect = canvas.getBoundingClientRect();
+      const sx = clientX - rect.left;
+      const sy = clientY - rect.top;
+      const worldPos = screenToIso(sx, sy);
+
+      // 이동 가능한 영역 제한 (해금 여부에 따라 확장)
+      const maxX = (state.unlockPhase === 'unlocked') ? LOCKED_RECT.x2 - 0.35 : UNLOCKED_RECT.x2 - 0.3;
+      const clampedX = Math.max(UNLOCKED_RECT.x1 + 0.35, Math.min(maxX, worldPos.x));
+      const clampedY = Math.max(UNLOCKED_RECT.y1 + 0.35, Math.min(UNLOCKED_RECT.y2 - 0.35, worldPos.y));
+
+      state.player.targetX = clampedX;
+      state.player.targetY = clampedY;
+
+      if (spawnRipple) {
+        state.ripples.push({
+          x: clampedX,
+          y: clampedY,
+          life: 0,
+          maxLife: 0.45
+        });
+      }
     }
 
-    // ----------------------------------------------------------------------------
-    // 8. 프레임 업데이트 로직 (Update)
-    // ----------------------------------------------------------------------------
+    canvas.addEventListener('pointerdown', (e) => {
+      isPointerDown = true;
+      handlePointerMoveToWorld(e.clientX, e.clientY, true);
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isPointerDown) return;
+      handlePointerMoveToWorld(e.clientX, e.clientY, false);
+    });
+
+    window.addEventListener('pointerup', () => {
+      isPointerDown = false;
+    });
+
+    // =========================================================================
+    // UI 버튼 이벤트 연결
+    // =========================================================================
+    modeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const selected = btn.dataset.mode;
+        state.animMode = selected;
+        modeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        modeDescText.textContent = MODE_DESCRIPTIONS[selected];
+
+        // 이미 해금된 상태라면 해당 애니메이션을 바로 미리보기로 재생해줌!
+        if (state.unlockPhase === 'unlocked') {
+          triggerUnlockSequence(true);
+        } else {
+          showToast(`모드 변경: ${btn.innerText.trim()}`);
+        }
+      });
+    });
+
+    btnInstantUnlock.addEventListener('click', () => {
+      initAudio();
+      // 플레이어를 발판 위로 이동시키고 즉시 해금 발동
+      state.player.x = PAD_CONFIG.x;
+      state.player.y = PAD_CONFIG.y;
+      state.player.targetX = null;
+      state.player.targetY = null;
+      state.padProgress = 1;
+      triggerUnlockSequence(false);
+    });
+
+    btnReset.addEventListener('click', () => {
+      resetSimulation();
+      showToast('필드가 다시 잠겼습니다. 발판 위로 이동해보세요!');
+    });
+
+    btnSound.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      btnSound.textContent = soundEnabled ? '🔊' : '🔇';
+      showToast(soundEnabled ? '효과음 켜짐' : '효과음 꺼짐');
+    });
+
+    // HTML 파일 단일 저장 기능
+    btnDownload.addEventListener('click', () => {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tycoon_field_unlock_showcase.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('HTML 파일이 다운로드되었습니다!');
+    });
+
+    function resetSimulation() {
+      state.unlockPhase = 'locked';
+      state.padProgress = 0;
+      state.lockTimer = 0;
+      state.shackleLift = 0;
+      state.lockScale = 1;
+      state.lockAlpha = 1;
+      state.fieldAnimTimer = 0;
+      state.particles = [];
+      state.floatingTexts = [];
+
+      // 플레이어가 새 구역 안에 있었다면 기존 구역으로 복귀
+      if (state.player.x > UNLOCKED_RECT.x2 - 0.35) {
+        state.player.x = -1.6;
+        state.player.y = 0.2;
+        state.player.targetX = null;
+        state.player.targetY = null;
+      }
+      updateStatusBadge();
+    }
+
+    function triggerUnlockSequence(skipLockIfAlreadyOpen = false) {
+      state.circleOrigin = { x: state.player.x, y: state.player.y };
+      state.lockTimer = 0;
+      state.shackleLift = 0;
+      state.lockScale = 1;
+      state.lockAlpha = 1;
+      state.fieldAnimTimer = 0;
+
+      // 애니메이션 종류별 재생 길이 미세 조정
+      const durations = {
+        wave: 1.25,
+        expand: 0.95,
+        circle: 1.15,
+        drop: 0.95,
+        bounce: 1.05
+      };
+      state.fieldAnimDuration = durations[state.animMode] || 1.1;
+
+      if (skipLockIfAlreadyOpen) {
+        // 모드 전환 시 필드 애니메이션만 즉시 재시연
+        state.unlockPhase = 'animating_field';
+        playUnlockFanfare(state.animMode);
+      } else {
+        state.unlockPhase = 'unlocking_lock';
+        playLockPopSound();
+        spawnSparkles(
+          (LOCKED_RECT.x1 + LOCKED_RECT.x2) * 0.5,
+          (LOCKED_RECT.y1 + LOCKED_RECT.y2) * 0.5,
+          18,
+          '#FFD028'
+        );
+      }
+      updateStatusBadge();
+    }
+
+    function updateStatusBadge() {
+      if (state.unlockPhase === 'locked') {
+        if (state.padProgress > 0) {
+          const pct = Math.floor(state.padProgress * 100);
+          statusBadge.textContent = `해금 충전 중... ${pct}%`;
+          statusBadge.className = 'px-2.5 py-0.5 rounded-full bg-[#B9F26D] border-2 border-[#3B2314] font-bold text-[#3B2314]';
+        } else {
+          statusBadge.textContent = '대기 중 (미해금)';
+          statusBadge.className = 'px-2.5 py-0.5 rounded-full bg-[#FFE8A3] border-2 border-[#3B2314] font-bold text-[#3B2314]';
+        }
+      } else if (state.unlockPhase === 'unlocking_lock') {
+        statusBadge.textContent = '🔓 자물쇠 해제!';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full bg-[#FFD028] border-2 border-[#3B2314] font-bold text-[#3B2314]';
+      } else if (state.unlockPhase === 'animating_field') {
+        statusBadge.textContent = '✨ 필드 생성 중!';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full bg-[#7AC71E] border-2 border-[#3B2314] font-bold text-white';
+      } else {
+        statusBadge.textContent = '✅ 새 구역 해금 완료!';
+        statusBadge.className = 'px-2.5 py-0.5 rounded-full bg-[#7AC71E] border-2 border-[#3B2314] font-bold text-white';
+      }
+    }
+
+    // =========================================================================
+    // 파티클 & 이펙트 생성 함수
+    // =========================================================================
+    function spawnCashBill(fromX, fromY, toX, toY) {
+      state.particles.push({
+        type: 'cash',
+        x: fromX,
+        y: fromY,
+        z: 28,
+        startX: fromX,
+        startY: fromY,
+        endX: toX + (Math.random() - 0.5) * 0.5,
+        endY: toY + (Math.random() - 0.5) * 0.5,
+        life: 0,
+        maxLife: 0.34,
+        rot: (Math.random() - 0.5) * 1.2
+      });
+    }
+
+    function spawnSparkles(wx, wy, count = 16, color = '#FFF59D') {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+        const speed = 1.2 + Math.random() * 2.4;
+        state.particles.push({
+          type: 'sparkle',
+          x: wx,
+          y: wy,
+          z: 16 + Math.random() * 14,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          vz: 40 + Math.random() * 55,
+          size: 4 + Math.random() * 4,
+          color: i % 2 === 0 ? color : '#FFFFFF',
+          life: 0,
+          maxLife: 0.45 + Math.random() * 0.25
+        });
+      }
+    }
+
+    function spawnDustRing(rect, count = 26) {
+      for (let i = 0; i < count; i++) {
+        const t = i / count;
+        let wx, wy;
+        // 사각형 테두리를 따라 먼지 구름 배치
+        if (t < 0.25) {
+          const u = t / 0.25;
+          wx = rect.x1 + (rect.x2 - rect.x1) * u;
+          wy = rect.y1;
+        } else if (t < 0.5) {
+          const u = (t - 0.25) / 0.25;
+          wx = rect.x2;
+          wy = rect.y1 + (rect.y2 - rect.y1) * u;
+        } else if (t < 0.75) {
+          const u = (t - 0.5) / 0.25;
+          wx = rect.x2 - (rect.x2 - rect.x1) * u;
+          wy = rect.y2;
+        } else {
+          const u = (t - 0.75) / 0.25;
+          wx = rect.x1;
+          wy = rect.y2 - (rect.y2 - rect.y1) * u;
+        }
+        const cx = (rect.x1 + rect.x2) * 0.5;
+        const cy = (rect.y1 + rect.y2) * 0.5;
+        const dirX = wx - cx;
+        const dirY = wy - cy;
+        const len = Math.hypot(dirX, dirY) || 1;
+        state.particles.push({
+          type: 'dust',
+          x: wx,
+          y: wy,
+          z: 2,
+          vx: (dirX / len) * (1.2 + Math.random() * 1.4),
+          vy: (dirY / len) * (1.2 + Math.random() * 1.4),
+          vz: 12 + Math.random() * 18,
+          size: 8 + Math.random() * 8,
+          life: 0,
+          maxLife: 0.45 + Math.random() * 0.2
+        });
+      }
+    }
+
+    // =========================================================================
+    // 프레임 업데이트 로직
+    // =========================================================================
+    let lastTime = performance.now();
+
     function update(dt) {
-      // 카메라 셰이크 감쇠
-      if (cameraShake.time > 0) {
-        cameraShake.time = Math.max(0, cameraShake.time - dt);
+      // 카메라 쉐이크 감쇠
+      if (state.cameraShake > 0) {
+        state.cameraShake = Math.max(0, state.cameraShake - dt * 28);
       }
 
-      // 1) 플레이어 이동 처리
+      // 1. 플레이어 이동 처리
+      const p = state.player;
       let moveX = 0;
       let moveY = 0;
-      if (keysPressed['w'] || keysPressed['arrowup'])    { moveX -= 1; moveY -= 1; }
-      if (keysPressed['s'] || keysPressed['arrowdown'])  { moveX += 1; moveY += 1; }
-      if (keysPressed['a'] || keysPressed['arrowleft'])  { moveX -= 1; moveY += 1; }
-      if (keysPressed['d'] || keysPressed['arrowright']) { moveX += 1; moveY -= 1; }
 
+      // 아이소메트릭 방향에 맞춘 직관적 WASD/방향키 매핑
+      if (state.keys['KeyW'] || state.keys['ArrowUp']) { moveX -= 1; moveY -= 1; }
+      if (state.keys['KeyS'] || state.keys['ArrowDown']) { moveX += 1; moveY += 1; }
+      if (state.keys['KeyA'] || state.keys['ArrowLeft']) { moveX -= 1; moveY += 1; }
+      if (state.keys['KeyD'] || state.keys['ArrowRight']) { moveX += 1; moveY -= 1; }
+
+      let isMoving = false;
       if (moveX !== 0 || moveY !== 0) {
         const len = Math.hypot(moveX, moveY);
         moveX /= len;
         moveY /= len;
-        PLAYER.x += moveX * PLAYER.speed * dt;
-        PLAYER.y += moveY * PLAYER.speed * dt;
-        PLAYER.facingX = moveX;
-        PLAYER.facingY = moveY;
-        PLAYER.isMoving = true;
-        PLAYER.walkCycle += dt * 13;
-      } else if (PLAYER.targetX !== null && PLAYER.targetY !== null) {
-        const dx = PLAYER.targetX - PLAYER.x;
-        const dy = PLAYER.targetY - PLAYER.y;
+        p.x += moveX * p.speed * dt;
+        p.y += moveY * p.speed * dt;
+        isMoving = true;
+      } else if (p.targetX !== null && p.targetY !== null) {
+        const dx = p.targetX - p.x;
+        const dy = p.targetY - p.y;
         const dist = Math.hypot(dx, dy);
-        if (dist > 0.05) {
-          const step = Math.min(dist, PLAYER.speed * dt);
-          PLAYER.x += (dx / dist) * step;
-          PLAYER.y += (dy / dist) * step;
-          PLAYER.facingX = dx / dist;
-          PLAYER.facingY = dy / dist;
-          PLAYER.isMoving = true;
-          PLAYER.walkCycle += dt * 13;
+        if (dist > 0.06) {
+          const step = Math.min(dist, p.speed * dt);
+          p.x += (dx / dist) * step;
+          p.y += (dy / dist) * step;
+          isMoving = true;
         } else {
-          PLAYER.x = PLAYER.targetX;
-          PLAYER.y = PLAYER.targetY;
-          PLAYER.targetX = null;
-          PLAYER.targetY = null;
-          PLAYER.isMoving = false;
+          p.x = p.targetX;
+          p.y = p.targetY;
+          p.targetX = null;
+          p.targetY = null;
+        }
+      }
+
+      // 플레이어 경계 제한
+      const maxAllowX = (state.unlockPhase === 'unlocked') ? LOCKED_RECT.x2 - 0.35 : UNLOCKED_RECT.x2 - 0.3;
+      p.x = Math.max(UNLOCKED_RECT.x1 + 0.35, Math.min(maxAllowX, p.x));
+      p.y = Math.max(UNLOCKED_RECT.y1 + 0.35, Math.min(UNLOCKED_RECT.y2 - 0.35, p.y));
+
+      if (isMoving) {
+        p.walkCycle += dt * 13;
+        const screenVelX = moveX - moveY;
+        if (Math.abs(screenVelX) > 0.05) {
+          p.facing = screenVelX >= 0 ? 1 : -1;
         }
       } else {
-        PLAYER.isMoving = false;
-        PLAYER.walkCycle = 0;
+        p.walkCycle = 0;
       }
 
-      // 이동 경계 제한 (해금 전엔 x <= 3.78, 해금 후엔 x <= 7.78)
-      const maxBoundX = (UNLOCK_ANIM.phase === 'unlocked') ? LOCKED_ZONE.maxX - 0.22 : EXISTING_FIELD.maxX - 0.22;
-      PLAYER.x = Math.max(0.22, Math.min(maxBoundX, PLAYER.x));
-      PLAYER.y = Math.max(0.22, Math.min(EXISTING_FIELD.maxY - 0.22, PLAYER.y));
+      // 2. 해금 발판 위 충돌 판정 및 게이지 충전
+      const halfPad = PAD_CONFIG.size * 0.52;
+      const onPad =
+        Math.abs(p.x - PAD_CONFIG.x) <= halfPad &&
+        Math.abs(p.y - PAD_CONFIG.y) <= halfPad;
 
-      // 2) 해금 발판 충돌 & 게이지 충전
-      const padMinX = UNLOCK_PAD.x - 0.1;
-      const padMaxX = UNLOCK_PAD.x + UNLOCK_PAD.size + 0.1;
-      const padMinY = UNLOCK_PAD.y - 0.1;
-      const padMaxY = UNLOCK_PAD.y + UNLOCK_PAD.size + 0.1;
+      if (state.unlockPhase === 'locked') {
+        if (onPad) {
+          const fillSpeed = 0.72; // 약 1.38초 동안 0 -> 100% 충전
+          state.padProgress = Math.min(1, state.padProgress + fillSpeed * dt);
+          state.cashSoundAccum += dt;
+          state.cashParticleAccum += dt;
 
-      PLAYER.onPad = (
-        UNLOCK_ANIM.phase === 'locked' &&
-        PLAYER.x >= padMinX && PLAYER.x <= padMaxX &&
-        PLAYER.y >= padMinY && PLAYER.y <= padMaxY
-      );
-
-      if (UNLOCK_ANIM.phase === 'locked') {
-        if (PLAYER.onPad) {
-          UNLOCK_PAD.progress = Math.min(1, UNLOCK_PAD.progress + dt / UNLOCK_PAD.fillDuration);
-          UNLOCK_PAD.scaleAnim += (1.06 - UNLOCK_PAD.scaleAnim) * Math.min(1, dt * 14);
-
-          // 지폐 파티클 & 사운드 틱
-          UNLOCK_PAD.coinEmitTimer += dt;
-          if (UNLOCK_PAD.coinEmitTimer >= 0.11) {
-            UNLOCK_PAD.coinEmitTimer = 0;
-            spawnCashParticle();
-            sfx.playCoinTick(UNLOCK_PAD.progress);
+          if (state.cashParticleAccum >= 0.075) {
+            state.cashParticleAccum = 0;
+            spawnCashBill(p.x, p.y, PAD_CONFIG.x, PAD_CONFIG.y);
+          }
+          if (state.cashSoundAccum >= 0.13) {
+            state.cashSoundAccum = 0;
+            playCashTick(state.padProgress);
           }
 
-          // 100% 도달 시 자물쇠 열림 시퀀스 진입!
-          if (UNLOCK_PAD.progress >= 1) {
-            UNLOCK_ANIM.phase = 'padlock_seq';
-            PADLOCK.state = 'opening';
-            PADLOCK.timer = 0;
-            UNLOCK_ANIM.rippleOrigin = { x: PLAYER.x, y: PLAYER.y };
-            sfx.playLockPop();
-            updateHUDStatus();
+          updateStatusBadge();
+
+          if (state.padProgress >= 1) {
+            triggerUnlockSequence(false);
           }
+        }
+      }
+
+      // 3. 자물쇠 해제 애니메이션 단계 ('unlocking_lock')
+      if (state.unlockPhase === 'unlocking_lock') {
+        state.lockTimer += dt;
+        // 0 ~ 0.28s: 자물쇠 걸이(Shackle)가 위로 튀어오르며 열림
+        if (state.lockTimer < 0.28) {
+          const t = state.lockTimer / 0.28;
+          state.shackleLift = easeOutBack(t, 2.1) * 16;
+          state.lockScale = 1 + Math.sin(t * Math.PI) * 0.14;
+        } else if (state.lockTimer < 0.52) {
+          // 0.28 ~ 0.52s: 자물쇠 전체가 팡! 하고 작아지며 사라짐
+          const t = (state.lockTimer - 0.28) / 0.24;
+          state.shackleLift = 16;
+          state.lockScale = Math.max(0, 1 - easeOutCubic(t));
+          state.lockAlpha = Math.max(0, 1 - t * 1.2);
         } else {
-          // 발판에서 벗어나면 게이지가 천천히 줄어듦
-          UNLOCK_PAD.progress = Math.max(0, UNLOCK_PAD.progress - dt * 0.35);
-          UNLOCK_PAD.scaleAnim += (1.0 - UNLOCK_PAD.scaleAnim) * Math.min(1, dt * 10);
-        }
-      } else {
-        // 해금 시작 후 발판 부드럽게 축소 & 페이드아웃
-        UNLOCK_PAD.alpha = Math.max(0, UNLOCK_PAD.alpha - dt * 3.5);
-        UNLOCK_PAD.scaleAnim = Math.max(0.7, UNLOCK_PAD.scaleAnim - dt * 0.8);
-      }
-
-      // 3) 자물쇠 열림 애니메이션 (3번 GIF 참조: 걸이 위로 열림 -> 잠시 정지 -> 펑 사라짐)
-      if (UNLOCK_ANIM.phase === 'padlock_seq') {
-        PADLOCK.timer += dt;
-
-        if (PADLOCK.state === 'opening') {
-          // 0 ~ 0.32초: 걸이(shackle)가 위로 경쾌하게 솟아오르며 열림
-          const t = Math.min(1, PADLOCK.timer / 0.32);
-          PADLOCK.shackleLift = easeOutBack(t);
-          PADLOCK.shackleTilt = -0.14 * t;
-          PADLOCK.scale = 1 + Math.sin(t * Math.PI) * 0.12;
-
-          if (PADLOCK.timer >= 0.44) {
-            PADLOCK.state = 'vanishing';
-            PADLOCK.timer = 0;
-            spawnLockBurst(PADLOCK.worldX, PADLOCK.worldY);
-            sfx.playUnlockFanfare();
-          }
-        } else if (PADLOCK.state === 'vanishing') {
-          // 0 ~ 0.22초: 자물쇠가 살짝 커지며 투명하게 사라짐과 동시에 필드 해금 연출 시작
-          const t = Math.min(1, PADLOCK.timer / 0.22);
-          PADLOCK.scale = 1.0 + t * 0.45;
-          PADLOCK.alpha = 1 - t;
-
-          if (t >= 1) {
-            PADLOCK.state = 'gone';
-            UNLOCK_ANIM.phase = 'field_anim';
-            UNLOCK_ANIM.timer = 0;
-            // 모드별 지속시간 설정
-            const durations = {
-              wave: 1.15,
-              expand: 0.85,
-              ripple: 1.15,
-              drop: 0.85,
-              bounce: 0.95
-            };
-            UNLOCK_ANIM.duration = durations[UNLOCK_ANIM.mode] || 1.0;
-            updateHUDStatus();
-          }
+          // 자물쇠 소멸 완료 -> 선택된 필드 해금 애니메이션 시작!
+          state.unlockPhase = 'animating_field';
+          state.fieldAnimTimer = 0;
+          playUnlockFanfare(state.animMode);
+          updateStatusBadge();
         }
       }
 
-      // 4) 선택된 5종 필드 해금 애니메이션 진행
-      if (UNLOCK_ANIM.phase === 'field_anim') {
-        UNLOCK_ANIM.timer += dt;
-        const p = Math.min(1, UNLOCK_ANIM.timer / UNLOCK_ANIM.duration);
+      // 4. 필드 해금 애니메이션 단계 ('animating_field')
+      if (state.unlockPhase === 'animating_field') {
+        const prevTimer = state.fieldAnimTimer;
+        state.fieldAnimTimer += dt;
+        const progress = Math.min(1, state.fieldAnimTimer / state.fieldAnimDuration);
 
-        if (UNLOCK_ANIM.mode === 'wave') {
-          // 타일 파도형식: waveOrder(0~6) 순차 팝업
-          UNLOCK_ANIM.subTiles.forEach((tile) => {
-            const delay = tile.waveOrder * 0.085;
-            const localT = Math.max(0, Math.min(1, (UNLOCK_ANIM.timer - delay) / 0.42));
-            tile.progress = localT;
-            if (localT > 0.05 && !tile.popped) {
-              tile.popped = true;
-              sfx.playTilePop(tile.waveOrder);
-            }
-          });
-        } else if (UNLOCK_ANIM.mode === 'ripple') {
-          // 원형 확산: 플레이어 위치 기준 반경이 넓어지며 닿은 타일이 생성
-          const maxDist = 6.2;
-          const currentRadius = p * maxDist;
-          UNLOCK_ANIM.subTiles.forEach((tile, idx) => {
-            const dist = Math.hypot(tile.cx - UNLOCK_ANIM.rippleOrigin.x, tile.cy - UNLOCK_ANIM.rippleOrigin.y);
-            if (currentRadius >= dist) {
-              if (!tile.popped) {
-                tile.popped = true;
-                sfx.playTilePop(idx);
-              }
-              tile.progress = Math.min(1, tile.progress + dt * 3.4);
-            }
-          });
-        } else if (UNLOCK_ANIM.mode === 'drop') {
-          // 필드 낙하: 0.48 시점 착지 시 쿵! 효과음 + 먼지 + 화면 흔들림
-          if (p >= 0.48 && !UNLOCK_ANIM._dropImpacted) {
-            UNLOCK_ANIM._dropImpacted = true;
-            cameraShake = { time: 0.28, intensity: 9 };
-            spawnDustCloud();
-            sfx.playHeavyThud();
+        // 필드 낙하 모드 착지 순간 임팩트 효과
+        if (state.animMode === 'drop') {
+          const dropT = Math.min(1, progress / 0.62);
+          const prevDropT = Math.min(1, (prevTimer / state.fieldAnimDuration) / 0.62);
+          if (dropT >= 1 && prevDropT < 1) {
+            state.cameraShake = 9;
+            spawnDustRing(LOCKED_RECT, 28);
+            spawnSparkles(
+              (LOCKED_RECT.x1 + LOCKED_RECT.x2) * 0.5,
+              (LOCKED_RECT.y1 + LOCKED_RECT.y2) * 0.5,
+              18,
+              '#B9F26D'
+            );
           }
         }
 
-        if (p >= 1) {
-          UNLOCK_ANIM.phase = 'unlocked';
-          UNLOCK_ANIM._dropImpacted = false;
-          UNLOCK_ANIM.subTiles.forEach(t => { t.progress = 1; t.popped = true; });
-          updateHUDStatus();
+        if (progress >= 1) {
+          state.unlockPhase = 'unlocked';
+          if (state.animMode !== 'drop') {
+            spawnSparkles(
+              (LOCKED_RECT.x1 + LOCKED_RECT.x2) * 0.5,
+              (LOCKED_RECT.y1 + LOCKED_RECT.y2) * 0.5,
+              22,
+              '#FFF176'
+            );
+          }
+          updateStatusBadge();
         }
       }
 
-      // 5) 파티클 업데이트
-      for (let i = particles.length - 1; i >= 0; i--) {
-        const pt = particles[i];
-        pt.life -= dt;
-        if (pt.life <= 0) {
-          particles.splice(i, 1);
+      // 5. 파티클 및 리플 업데이트
+      for (let i = state.particles.length - 1; i >= 0; i--) {
+        const pt = state.particles[i];
+        pt.life += dt;
+        if (pt.life >= pt.maxLife) {
+          state.particles.splice(i, 1);
           continue;
         }
-        if (pt.type === 'ring') {
-          const t = 1 - pt.life / pt.maxLife;
-          pt.radius = 4 + t * (pt.maxRadius - 4);
-        } else if (pt.type === 'sparkle' || pt.type === 'dust') {
-          pt.wx += pt.vx * dt;
-          pt.wy += pt.vy * dt;
-          pt.wz += pt.vz * dt;
-          if (pt.type === 'sparkle') pt.vz -= 160 * dt;
+        const t = pt.life / pt.maxLife;
+        if (pt.type === 'cash') {
+          pt.x = pt.startX + (pt.endX - pt.startX) * easeOutCubic(t);
+          pt.y = pt.startY + (pt.endY - pt.startY) * easeOutCubic(t);
+          pt.z = 26 * (1 - t) + Math.sin(t * Math.PI) * 34;
+          pt.rot += dt * 9;
+        } else if (pt.type === 'sparkle') {
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.z += pt.vz * dt;
+          pt.vz -= 140 * dt;
+        } else if (pt.type === 'dust') {
+          pt.x += pt.vx * dt;
+          pt.y += pt.vy * dt;
+          pt.z += pt.vz * dt;
+        }
+      }
+
+      for (let i = state.ripples.length - 1; i >= 0; i--) {
+        state.ripples[i].life += dt;
+        if (state.ripples[i].life >= state.ripples[i].maxLife) {
+          state.ripples.splice(i, 1);
         }
       }
     }
 
-    // ----------------------------------------------------------------------------
-    // 9. 렌더링 함수 모음 (Render)
-    // ----------------------------------------------------------------------------
+    // =========================================================================
+    // 렌더링 함수 모음
+    // =========================================================================
 
-    // 배경 풀밭 & 은은한 아이소메트릭 격자 패턴
-    function drawBackground(w, h) {
-      ctx.fillStyle = '#d6e594';
-      ctx.fillRect(0, 0, w, h);
+    // 배경 파스텔 잔디 + 은은한 아이소메트릭 격자 패턴 (첨부 3번 GIF 톤앤매너)
+    function drawBackground() {
+      const grad = ctx.createLinearGradient(0, 0, 0, state.height);
+      grad.addColorStop(0, '#DFECB9');
+      grad.addColorStop(1, '#CFE0A3');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, state.width, state.height);
 
-      // 은은한 다이아몬드 타일 패턴 (첨부 3번 GIF 배경 느낌)
+      // 은은한 아이소메트릭 배경 그리드 라인
       ctx.save();
-      ctx.strokeStyle = 'rgba(186, 206, 114, 0.55)';
-      ctx.lineWidth = 1.25;
-
-      const minG = -14;
-      const maxG = 22;
-      ctx.beginPath();
-      for (let i = minG; i <= maxG; i++) {
-        const p1 = worldToScreen(i, minG);
-        const p2 = worldToScreen(i, maxG);
+      ctx.strokeStyle = 'rgba(130, 158, 76, 0.16)';
+      ctx.lineWidth = 1;
+      const range = 14;
+      for (let i = -range; i <= range; i++) {
+        const p1 = isoToScreen(i, -range, 0);
+        const p2 = isoToScreen(i, range, 0);
+        ctx.beginPath();
         ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
 
-        const q1 = worldToScreen(minG, i);
-        const q2 = worldToScreen(maxG, i);
+        const q1 = isoToScreen(-range, i, 0);
+        const q2 = isoToScreen(range, i, 0);
+        ctx.beginPath();
         ctx.moveTo(q1.x, q1.y);
         ctx.lineTo(q2.x, q2.y);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // 3D 압출된 아이소메트릭 플랫폼 블록 그리기 (임의의 사각형 영역 [x0, x1] x [y0, y1])
-    function drawIsoPlatform(x0, x1, y0, y1, zHeight = 0, options = {}) {
-      const {
-        topColor = '#fffaf0',
-        leftSideColor = '#dfd0b4',
-        rightSideColor = '#cbb896',
-        borderColor = '#b9a37e',
-        showGrid = true,
-        shadowAlpha = 0.16,
-        alpha = 1
-      } = options;
-
-      const thick = ISO.thickness * ISO.scale;
-      const top    = worldToScreen(x0, y0, zHeight);
-      const right  = worldToScreen(x1, y0, zHeight);
-      const bottom = worldToScreen(x1, y1, zHeight);
-      const left   = worldToScreen(x0, y1, zHeight);
-
-      ctx.save();
-      ctx.globalAlpha = alpha;
-
-      // 바닥 접지 그림자 (zHeight가 높을수록 살짝 작고 옅어짐)
-      if (shadowAlpha > 0) {
-        const shadowScale = Math.max(0.55, 1 - zHeight / 320);
-        const sTop    = worldToScreen(x0, y0, 0);
-        const sRight  = worldToScreen(x1, y0, 0);
-        const sBottom = worldToScreen(x1, y1, 0);
-        const sLeft   = worldToScreen(x0, y1, 0);
-
-        ctx.fillStyle = `rgba(110, 128, 48, ${shadowAlpha * shadowScale})`;
-        ctx.beginPath();
-        ctx.moveTo(sTop.x, sTop.y + thick * 0.75);
-        ctx.lineTo(sRight.x + 4, sRight.y + thick * 0.85);
-        ctx.lineTo(sBottom.x, sBottom.y + thick * 1.15);
-        ctx.lineTo(sLeft.x - 4, sLeft.y + thick * 0.85);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // 좌하단 3D 두께 면 (Left-Front)
-      ctx.fillStyle = leftSideColor;
-      ctx.beginPath();
-      ctx.moveTo(left.x, left.y);
-      ctx.lineTo(bottom.x, bottom.y);
-      ctx.lineTo(bottom.x, bottom.y + thick);
-      ctx.lineTo(left.x, left.y + thick);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // 우하단 3D 두께 면 (Right-Front)
-      ctx.fillStyle = rightSideColor;
-      ctx.beginPath();
-      ctx.moveTo(bottom.x, bottom.y);
-      ctx.lineTo(right.x, right.y);
-      ctx.lineTo(right.x, right.y + thick);
-      ctx.lineTo(bottom.x, bottom.y + thick);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-
-      // 상단 바닥 면
-      ctx.fillStyle = topColor;
-      ctx.beginPath();
-      ctx.moveTo(top.x, top.y);
-      ctx.lineTo(right.x, right.y);
-      ctx.lineTo(bottom.x, bottom.y);
-      ctx.lineTo(left.x, left.y);
-      ctx.closePath();
-      ctx.fill();
-
-      // 내부 타일 격자선
-      if (showGrid) {
-        ctx.strokeStyle = 'rgba(205, 187, 155, 0.55)';
-        ctx.lineWidth = 1.2;
-        ctx.beginPath();
-        for (let gx = Math.ceil(x0); gx < x1; gx++) {
-          const a = worldToScreen(gx, y0, zHeight);
-          const b = worldToScreen(gx, y1, zHeight);
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-        }
-        for (let gy = Math.ceil(y0); gy < y1; gy++) {
-          const a = worldToScreen(x0, gy, zHeight);
-          const b = worldToScreen(x1, gy, zHeight);
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-        }
         ctx.stroke();
       }
-
-      // 상단 외곽 테두리
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(top.x, top.y);
-      ctx.lineTo(right.x, right.y);
-      ctx.lineTo(bottom.x, bottom.y);
-      ctx.lineTo(left.x, left.y);
-      ctx.closePath();
-      ctx.stroke();
-
       ctx.restore();
     }
 
-    // 미해금 구역 점선 테두리 (타일 없이 바닥에 점선만 표시)
-    function drawLockedDashedZone() {
-      const top    = worldToScreen(LOCKED_ZONE.minX, LOCKED_ZONE.minY);
-      const right  = worldToScreen(LOCKED_ZONE.maxX, LOCKED_ZONE.minY);
-      const bottom = worldToScreen(LOCKED_ZONE.maxX, LOCKED_ZONE.maxY);
-      const left   = worldToScreen(LOCKED_ZONE.minX, LOCKED_ZONE.maxY);
+    /**
+     * 3D 아이소메트릭 잔디 플랫폼(직육면체 슬래브) 그리기
+     */
+    function drawIsoSlab(x1, y1, x2, y2, zOffset = 0, options = {}) {
+      const {
+        topColor = '#9CD34A',
+        leftSideColor = '#78B332',
+        rightSideColor = '#639924',
+        borderColor = '#53821C',
+        showGrid = true,
+        drawShadow = true,
+        shadowAlpha = 0.22,
+        shadowScale = 1,
+        thickness = SLAB_THICKNESS
+      } = options;
 
-      ctx.save();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3.5 * ISO.scale;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.setLineDash([12 * ISO.scale, 10 * ISO.scale]);
-      // 은은한 점선 흐름 애니메이션
-      ctx.lineDashOffset = -performance.now() * 0.025;
+      // 바닥 그림자
+      if (drawShadow) {
+        const cx = (x1 + x2) * 0.5;
+        const cy = (y1 + y2) * 0.5;
+        const hw = (x2 - x1) * 0.5 * shadowScale;
+        const hh = (y2 - y1) * 0.5 * shadowScale;
+        const sTop = isoToScreen(cx - hw, cy - hh, -thickness);
+        const sRight = isoToScreen(cx + hw, cy - hh, -thickness);
+        const sBottom = isoToScreen(cx + hw, cy + hh, -thickness);
+        const sLeft = isoToScreen(cx - hw, cy + hh, -thickness);
 
-      ctx.beginPath();
-      ctx.moveTo(top.x, top.y);
-      ctx.lineTo(right.x, right.y);
-      ctx.lineTo(bottom.x, bottom.y);
-      ctx.lineTo(left.x, left.y);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // 해금 발판 (첨부 1, 2 이미지의 "새 구역 / 💵 200" 카드 & 하단->상단 초록 게이지 충전을 아이소메트릭 바닥 투영으로 완벽 구현)
-    function drawUnlockPad() {
-      if (UNLOCK_PAD.alpha <= 0.01) return;
-
-      const cx = UNLOCK_PAD.x + UNLOCK_PAD.size * 0.5;
-      const cy = UNLOCK_PAD.y + UNLOCK_PAD.size * 0.5;
-      const centerScreen = worldToScreen(cx, cy, 0);
-
-      // 정사각형 로컬 좌표(-S/2 ~ +S/2)를 아이소메트릭 평면으로 사상하는 2D 아핀 변환 행렬
-      // (1, 0) -> (+tileW/2, +tileH/2), (0, 1) -> (-tileW/2, +tileH/2)
-      const hw = (ISO.tileW * ISO.scale) * 0.5;
-      const hh = (ISO.tileH * ISO.scale) * 0.5;
-      const cardUnits = UNLOCK_PAD.size * UNLOCK_PAD.scaleAnim;
-
-      ctx.save();
-      ctx.globalAlpha = UNLOCK_PAD.alpha;
-      ctx.translate(centerScreen.x, centerScreen.y);
-      ctx.transform(hw, hh, -hw, hh, 0, 0);
-
-      // 이제 로컬 좌표계 (-cardUnits/2 ~ +cardUnits/2)는 완벽한 정사각형 카드처럼 다룰 수 있음!
-      const S = cardUnits;
-      const half = S * 0.5;
-      const r = S * 0.16; // 둥근 모서리 반경
-
-      function roundRectPath(x, y, w, h, radius) {
-        ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + w - radius, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-        ctx.lineTo(x + w, y + h - radius);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-        ctx.lineTo(x + radius, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-        ctx.closePath();
-      }
-
-      // 발판 그림자
-      ctx.fillStyle = 'rgba(59, 35, 20, 0.18)';
-      roundRectPath(-half + 0.03, -half + 0.04, S, S, r);
-      ctx.fill();
-
-      // 1) 크림색 배경 채우기 (#fcf6e8)
-      ctx.fillStyle = '#fcf6e8';
-      roundRectPath(-half, -half, S, S, r);
-      ctx.fill();
-
-      // 2) 하단 -> 상단으로 차오르는 라임그린 게이지 (#74c721) (첨부 2번 이미지 스타일)
-      if (UNLOCK_PAD.progress > 0) {
         ctx.save();
-        roundRectPath(-half, -half, S, S, r);
-        ctx.clip();
-
-        const fillH = S * UNLOCK_PAD.progress;
-        ctx.fillStyle = '#74c721';
-        ctx.fillRect(-half, half - fillH, S, fillH);
-
-        // 게이지 상단 하이라이트 라인
-        ctx.fillStyle = '#9be346';
-        ctx.fillRect(-half, half - fillH, S, Math.min(fillH, S * 0.045));
+        ctx.fillStyle = `rgba(65, 92, 30, ${shadowAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(sTop.x, sTop.y + 4 * state.scale);
+        ctx.lineTo(sRight.x, sRight.y + 4 * state.scale);
+        ctx.lineTo(sBottom.x, sBottom.y + 4 * state.scale);
+        ctx.lineTo(sLeft.x, sLeft.y + 4 * state.scale);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
       }
 
-      // 3) 4방향 확장 화살표 + 중앙 점선 사각형 아이콘 (첨부 1,2번 우측 아이콘)
-      const darkBrown = '#3b2314';
-      ctx.strokeStyle = darkBrown;
-      ctx.fillStyle = '#ffffff';
-      ctx.lineWidth = S * 0.026;
-      ctx.lineCap = 'round';
+      // 윗면 꼭짓점 (z = zOffset)
+      const pTop = isoToScreen(x1, y1, zOffset);
+      const pRight = isoToScreen(x2, y1, zOffset);
+      const pBottom = isoToScreen(x2, y2, zOffset);
+      const pLeft = isoToScreen(x1, y2, zOffset);
+
+      // 아랫면 꼭짓점 (z = zOffset - thickness)
+      const bRight = isoToScreen(x2, y1, zOffset - thickness);
+      const bBottom = isoToScreen(x2, y2, zOffset - thickness);
+      const bLeft = isoToScreen(x1, y2, zOffset - thickness);
+
+      ctx.save();
       ctx.lineJoin = 'round';
 
-      const iconCenterY = -S * 0.21;
-      const boxHalf = S * 0.095;
-
-      // 중앙 작은 점선 정사각형
-      ctx.save();
-      ctx.setLineDash([S * 0.035, S * 0.03]);
-      ctx.strokeRect(-boxHalf, iconCenterY - boxHalf, boxHalf * 2, boxHalf * 2);
-      ctx.restore();
-
-      // 4개 모서리 대각선 화살표
-      const dirs = [
-        [-1, -1], [1, -1], [-1, 1], [1, 1]
-      ];
-      dirs.forEach(([dx, dy]) => {
-        const sx = dx * (boxHalf + S * 0.035);
-        const sy = iconCenterY + dy * (boxHalf + S * 0.035);
-        const ex = dx * (boxHalf + S * 0.145);
-        const ey = iconCenterY + dy * (boxHalf + S * 0.145);
-        const head = S * 0.075;
-
-        // 화살표 몸통 & 머리 외곽선
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(ex, ey);
-        ctx.moveTo(ex - dx * head, ey);
-        ctx.lineTo(ex, ey);
-        ctx.lineTo(ex, ey - dy * head);
-        ctx.stroke();
-      });
-
-      // 4) "새 구역" 텍스트
-      ctx.fillStyle = darkBrown;
-      ctx.font = `900 ${S * 0.155}px "Noto Sans KR", sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('새 구역', 0, S * 0.075);
-
-      // 5) 하단 연한 살구색 알약(Pill) 배지 (#fce6ad) + 지폐 아이콘 + 남은 비용 숫자
-      const pillW = S * 0.78;
-      const pillH = S * 0.22;
-      const pillY = S * 0.21;
-      ctx.fillStyle = '#fce6ad';
-      roundRectPath(-pillW * 0.5, pillY, pillW, pillH, pillH * 0.5);
-      ctx.fill();
-
-      // 지폐 다발 아이콘 (좌측)
-      const billX = -pillW * 0.24;
-      const billY = pillY + pillH * 0.5;
-      const bw = S * 0.16;
-      const bh = S * 0.10;
-      ctx.save();
-      ctx.translate(billX, billY);
-      ctx.rotate(-0.18);
-      ctx.fillStyle = '#5bb82a';
-      ctx.strokeStyle = darkBrown;
-      ctx.lineWidth = S * 0.018;
-      ctx.fillRect(-bw * 0.5, -bh * 0.5, bw, bh);
-      ctx.strokeRect(-bw * 0.5, -bh * 0.5, bw, bh);
-      // 지폐 띠
-      ctx.fillStyle = '#d7f598';
-      ctx.fillRect(-bw * 0.14, -bh * 0.5, bw * 0.28, bh);
-      ctx.restore();
-
-      // 남은 금액 카운트다운 (200 -> 0)
-      const remainCost = Math.max(0, Math.ceil(UNLOCK_PAD.cost * (1 - UNLOCK_PAD.progress)));
-      ctx.fillStyle = darkBrown;
-      ctx.font = `900 ${S * 0.16}px "Noto Sans KR", sans-serif`;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(remainCost), -pillW * 0.06, pillY + pillH * 0.52);
-
-      // 6) 외곽 굵은 다크브라운 테두리 (#3b2314)
-      ctx.strokeStyle = darkBrown;
-      ctx.lineWidth = S * 0.042;
-      roundRectPath(-half, -half, S, S, r);
-      ctx.stroke();
-
-      ctx.restore();
-    }
-
-    // 2.5D 귀여운 자물쇠 그리기 (첨부 3번 GIF 스타일: 황금색 몸통 + 은색 U자 걸이 + 위로 열림 애니메이션)
-    function drawPadlock() {
-      if (PADLOCK.state === 'gone' || PADLOCK.alpha <= 0.01) return;
-
-      const pos = worldToScreen(PADLOCK.worldX, PADLOCK.worldY, 0);
-      const bob = (PADLOCK.state === 'locked') ? Math.sin(performance.now() * 0.004) * 3.5 : 0;
-      const sc = ISO.scale * PADLOCK.scale;
-
-      ctx.save();
-      ctx.globalAlpha = PADLOCK.alpha;
-      ctx.translate(pos.x, pos.y - 12 * ISO.scale + bob);
-      ctx.scale(sc, sc);
-
-      const outline = '#3b2314';
-
-      // 바닥 그림자
-      ctx.fillStyle = 'rgba(95, 112, 42, 0.28)';
+      // 좌하단 측면 (y = y2 면)
+      ctx.fillStyle = leftSideColor;
       ctx.beginPath();
-      ctx.ellipse(0, 14 - bob * 0.5, 22, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 1) 은색 U자 걸이 (Shackle) - 해금 시 위로 솟아오르며 열림!
-      ctx.save();
-      const liftY = -PADLOCK.shackleLift * 18;
-      ctx.translate(0, liftY);
-      ctx.rotate(PADLOCK.shackleTilt);
-
-      // 걸이 외곽 (두꺼운 스트로크로 둥근 아치 표현)
-      ctx.lineCap = 'round';
-      // 다크브라운 외곽선
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 13;
-      ctx.beginPath();
-      ctx.arc(0, -14, 13, Math.PI, 0, false);
-      ctx.lineTo(13, -2);
-      ctx.moveTo(-13, -14);
-      ctx.lineTo(-13, -2);
-      ctx.stroke();
-
-      // 은백색 내부 채움
-      ctx.strokeStyle = '#dce3ec';
-      ctx.lineWidth = 6.5;
-      ctx.beginPath();
-      ctx.arc(0, -14, 13, Math.PI, 0, false);
-      ctx.lineTo(13, -2);
-      ctx.moveTo(-13, -14);
-      ctx.lineTo(-13, -2);
-      ctx.stroke();
-      ctx.restore();
-
-      // 2) 황금색 자물쇠 몸통 (#ffd026)
-      const bw = 42;
-      const bh = 34;
-      const bx = -bw * 0.5;
-      const by = -8;
-      const br = 9;
-
-      // 몸통 그림자 입체감
-      ctx.fillStyle = '#f2a900';
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, br);
-      ctx.fill();
-
-      // 몸통 메인 밝은 황금색
-      ctx.fillStyle = '#ffd026';
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh - 4, br);
-      ctx.fill();
-
-      // 몸통 테두리
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 3.8;
-      ctx.beginPath();
-      ctx.roundRect(bx, by, bw, bh, br);
-      ctx.stroke();
-
-      // 3) 중앙 열쇠구멍
-      ctx.fillStyle = outline;
-      ctx.beginPath();
-      ctx.arc(0, by + 13, 4.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(-2.5, by + 14);
-      ctx.lineTo(2.5, by + 14);
-      ctx.lineTo(3.6, by + 23);
-      ctx.lineTo(-3.6, by + 23);
+      ctx.moveTo(pLeft.x, pLeft.y);
+      ctx.lineTo(pBottom.x, pBottom.y);
+      ctx.lineTo(bBottom.x, bBottom.y);
+      ctx.lineTo(bLeft.x, bLeft.y);
       ctx.closePath();
       ctx.fill();
 
+      // 우하단 측면 (x = x2 면)
+      ctx.fillStyle = rightSideColor;
+      ctx.beginPath();
+      ctx.moveTo(pBottom.x, pBottom.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.lineTo(bRight.x, bRight.y);
+      ctx.lineTo(bBottom.x, bBottom.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // 윗면 잔디 바닥
+      ctx.fillStyle = topColor;
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.lineTo(pBottom.x, pBottom.y);
+      ctx.lineTo(pLeft.x, pLeft.y);
+      ctx.closePath();
+      ctx.fill();
+
+      // 필드 내부 은은한 타일 눈금
+      if (showGrid && (x2 - x1) > 0.6 && (y2 - y1) > 0.6) {
+        ctx.save();
+        ctx.clip();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+        ctx.lineWidth = 1.2 * state.scale;
+        const startX = Math.ceil(x1);
+        for (let gx = startX; gx < x2; gx += 1) {
+          const g1 = isoToScreen(gx, y1, zOffset);
+          const g2 = isoToScreen(gx, y2, zOffset);
+          ctx.beginPath();
+          ctx.moveTo(g1.x, g1.y);
+          ctx.lineTo(g2.x, g2.y);
+          ctx.stroke();
+        }
+        const startY = Math.ceil(y1 * 2) / 2;
+        for (let gy = startY; gy < y2; gy += 1) {
+          const g1 = isoToScreen(x1, gy, zOffset);
+          const g2 = isoToScreen(x2, gy, zOffset);
+          ctx.beginPath();
+          ctx.moveTo(g1.x, g1.y);
+          ctx.lineTo(g2.x, g2.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 윗면 테두리 하이라이트
+      ctx.strokeStyle = 'rgba(235, 255, 190, 0.65)';
+      ctx.lineWidth = 1.5 * state.scale;
+      ctx.beginPath();
+      ctx.moveTo(pLeft.x, pLeft.y);
+      ctx.lineTo(pTop.x, pTop.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.stroke();
+
+      // 외곽선
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 1.6 * state.scale;
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.lineTo(bRight.x, bRight.y);
+      ctx.lineTo(bBottom.x, bBottom.y);
+      ctx.lineTo(bLeft.x, bLeft.y);
+      ctx.lineTo(pLeft.x, pLeft.y);
+      ctx.closePath();
+      ctx.stroke();
+
       ctx.restore();
     }
 
-    // 5종 필드 해금 애니메이션 렌더링
-    function drawUnlockingField() {
-      if (UNLOCK_ANIM.phase === 'locked' || UNLOCK_ANIM.phase === 'padlock_seq') {
-        return;
+    /**
+     * 미해금 구역 바닥 흰색 점선 테두리 (첨부 3번 GIF 스타일)
+     */
+    function drawLockedDashedZone() {
+      const { x1, y1, x2, y2 } = LOCKED_RECT;
+      const pTop = isoToScreen(x1, y1, 0);
+      const pRight = isoToScreen(x2, y1, 0);
+      const pBottom = isoToScreen(x2, y2, 0);
+      const pLeft = isoToScreen(x1, y2, 0);
+
+      ctx.save();
+      // 안쪽 은은한 점선 보조 그리드
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.32)';
+      ctx.lineWidth = 1.2 * state.scale;
+      ctx.setLineDash([4 * state.scale, 5 * state.scale]);
+      for (let gx = x1 + 1; gx < x2; gx++) {
+        const a = isoToScreen(gx, y1, 0);
+        const b = isoToScreen(gx, y2, 0);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      for (let gy = y1 + 1; gy < y2; gy++) {
+        const a = isoToScreen(x1, gy, 0);
+        const b = isoToScreen(x2, gy, 0);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
       }
 
-      if (UNLOCK_ANIM.phase === 'unlocked') {
-        // 완전히 해금된 상태: 기존 필드와 동일한 4x4 플랫폼으로 렌더링
-        drawIsoPlatform(LOCKED_ZONE.minX, LOCKED_ZONE.maxX, LOCKED_ZONE.minY, LOCKED_ZONE.maxY, 0);
-        return;
-      }
+      // 외곽 굵은 흰색 점선 마름모 (이미지 3번과 동일한 깔끔한 점선)
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 3.2 * state.scale;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.setLineDash([9 * state.scale, 8 * state.scale]);
 
-      const p = Math.min(1, UNLOCK_ANIM.timer / UNLOCK_ANIM.duration);
-      const mode = UNLOCK_ANIM.mode;
-
-      if (mode === 'wave' || mode === 'ripple') {
-        // [타일 파도형식] & [원형 확산]: 16개 소단위 타일이 개별 팝업 애니메이션으로 생성
-        // 아이소메트릭 깊이(gx + gy) 순서대로 정렬해 그려야 겹침이 자연스러움
-        const sorted = [...UNLOCK_ANIM.subTiles].sort((a, b) => (a.gx + a.gy) - (b.gx + b.gy));
-
-        sorted.forEach((tile) => {
-          if (tile.progress <= 0) return;
-          const e = easeOutBack(tile.progress);
-          const scale = Math.max(0.01, e);
-          const zLift = (1 - tile.progress) * 28;
-          const half = 0.5 * Math.min(1.08, scale);
-
-          drawIsoPlatform(
-            tile.cx - half,
-            tile.cx + half,
-            tile.cy - half,
-            tile.cy + half,
-            zLift,
-            {
-              showGrid: false,
-              shadowAlpha: 0.12 * tile.progress,
-              alpha: Math.min(1, tile.progress * 1.6)
-            }
-          );
-        });
-
-        // [원형 확산] 모드일 때 플레이어로부터 퍼져나가는 빛나는 원형 파동 링 그리기
-        if (mode === 'ripple') {
-          const originScreen = worldToScreen(UNLOCK_ANIM.rippleOrigin.x, UNLOCK_ANIM.rippleOrigin.y, 2);
-          const maxR = 6.2 * (ISO.tileW * ISO.scale) * 0.5;
-          const curR = p * maxR;
-
-          ctx.save();
-          ctx.translate(originScreen.x, originScreen.y);
-          ctx.scale(1, 0.5); // 아이소메트릭 원근 납작화
-          ctx.strokeStyle = `rgba(255, 255, 255, ${(1 - p) * 0.9})`;
-          ctx.lineWidth = 7 * ISO.scale;
-          ctx.beginPath();
-          ctx.arc(0, 0, curR, 0, Math.PI * 2);
-          ctx.stroke();
-
-          ctx.strokeStyle = `rgba(116, 199, 33, ${(1 - p) * 0.7})`;
-          ctx.lineWidth = 14 * ISO.scale;
-          ctx.beginPath();
-          ctx.arc(0, 0, Math.max(0, curR - 8), 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-      } else if (mode === 'expand') {
-        // [필드확장]: 기존 필드(x=4)에서 새 구역 끝(x=8)까지 쭈욱 늘어남
-        const stretch = easeOutBack(p);
-        const curMaxX = LOCKED_ZONE.minX + 4 * Math.min(1.04, stretch);
-        drawIsoPlatform(LOCKED_ZONE.minX, curMaxX, LOCKED_ZONE.minY, LOCKED_ZONE.maxY, 0, {
-          showGrid: p > 0.75
-        });
-      } else if (mode === 'drop') {
-        // [필드 낙하]: 하늘 높이에서 중력 가속도로 떨어져 착지 후 쫀득한 스쿼시 바운스
-        let zHeight = 0;
-        let squashScale = 1;
-        const impactT = 0.48;
-
-        if (p < impactT) {
-          // 자유낙하 (가속)
-          const fallT = p / impactT;
-          zHeight = (1 - fallT * fallT) * 340;
-        } else {
-          // 착지 후 쫀득한 바운스 감쇠
-          const bT = (p - impactT) / (1 - impactT);
-          const damp = Math.exp(-bT * 5.5);
-          zHeight = Math.abs(Math.sin(bT * Math.PI * 2.5)) * 22 * damp;
-          squashScale = 1 + Math.sin(bT * Math.PI * 3) * 0.055 * damp;
-        }
-
-        const cx = 6.0;
-        const cy = 2.0;
-        const half = 2.0 * squashScale;
-        drawIsoPlatform(cx - half, cx + half, cy - half, cy + half, zHeight);
-      } else if (mode === 'bounce') {
-        // [튕김]: 구역 정중앙에서 스케일 0부터 탄성 오버슈트로 뿅! 튀어나옴
-        const elastic = easeOutElastic(p);
-        const sc = Math.max(0.02, elastic);
-        const cx = 6.0;
-        const cy = 2.0;
-        const half = 2.0 * sc;
-        const popZ = Math.sin(Math.min(1, p * 1.4) * Math.PI) * 18;
-        drawIsoPlatform(cx - half, cx + half, cy - half, cy + half, popZ);
-      }
+      ctx.beginPath();
+      ctx.moveTo(pTop.x, pTop.y);
+      ctx.lineTo(pRight.x, pRight.y);
+      ctx.lineTo(pBottom.x, pBottom.y);
+      ctx.lineTo(pLeft.x, pLeft.y);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // 귀여운 3등신 캐주얼 타이쿤 플레이어 캐릭터 그리기
-    function drawPlayer() {
-      const pos = worldToScreen(PLAYER.x, PLAYER.y, 0);
-      const bounce = PLAYER.isMoving ? Math.abs(Math.sin(PLAYER.walkCycle)) * 6 : Math.sin(performance.now() * 0.005) * 1.5;
-      const sc = ISO.scale;
+    /**
+     * 해금 발판 (첨부 이미지 1 & 2번 디자인 100% 재현 + 아이소메트릭 투영)
+     */
+    function drawUnlockPad() {
+      const center = isoToScreen(PAD_CONFIG.x, PAD_CONFIG.y, 0.4);
+      const tw = BASE_TILE_W * state.scale;
+      const th = BASE_TILE_H * state.scale;
+
+      // 로컬 2D 좌표계 크기 (120 x 120 기준)
+      const localSize = 120;
+      const worldHalf = PAD_CONFIG.size * 0.5;
+      const scaleFactor = (worldHalf / (localSize * 0.5));
+
+      ctx.save();
+      // 2D 정사각형 UI를 아이소메트릭 바닥 평면으로 정확히 아핀 변환
+      ctx.setTransform(
+        tw * scaleFactor * state.dpr,
+        th * scaleFactor * state.dpr,
+        -tw * scaleFactor * state.dpr,
+        th * scaleFactor * state.dpr,
+        center.x * state.dpr,
+        center.y * state.dpr
+      );
+
+      const half = localSize * 0.5;
+      const radius = 20;
+
+      // 발판 둥근 사각형 패스
+      function roundRectPath(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      // 1. 발판 바닥 그림자
+      ctx.fillStyle = 'rgba(59, 35, 20, 0.22)';
+      roundRectPath(-half + 3, -half + 4, localSize, localSize, radius);
+      ctx.fill();
+
+      // 2. 발판 크림색 바탕 (#FAF5EB)
+      ctx.fillStyle = '#FAF5EB';
+      roundRectPath(-half, -half, localSize, localSize, radius);
+      ctx.fill();
+
+      // 3. 게이지 충전 (아래에서 위로 차오르는 연두색 #7AC71E - 이미지 2번과 동일)
+      if (state.padProgress > 0) {
+        ctx.save();
+        roundRectPath(-half, -half, localSize, localSize, radius);
+        ctx.clip();
+
+        const fillH = localSize * state.padProgress;
+        const fillTopY = half - fillH;
+
+        ctx.fillStyle = '#7AC71E';
+        ctx.fillRect(-half, fillTopY, localSize, fillH);
+
+        // 게이지 상단 물결/하이라이트 선
+        if (state.padProgress < 1) {
+          ctx.fillStyle = '#9BE33D';
+          ctx.fillRect(-half, fillTopY, localSize, 3.5);
+        }
+        ctx.restore();
+      }
+
+      // 4. 상단 아이콘: 4방향 확장 화살표 + 점선 사각형 (첨부 이미지 1, 2 우측 카드)
+      ctx.save();
+      ctx.translate(0, -23);
+      ctx.strokeStyle = '#3B2314';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.lineWidth = 2.6;
+      ctx.setLineDash([3.5, 3.5]);
+      ctx.strokeRect(-14, -14, 28, 28);
+      ctx.setLineDash([]);
+
+      // 4개 대각선 화살표 그리기
+      const dirs = [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1]
+      ];
+      dirs.forEach(([dx, dy]) => {
+        ctx.save();
+        ctx.translate(dx * 15, dy * 15);
+        const angle = Math.atan2(dy, dx);
+        ctx.rotate(angle);
+        // 화살표 외곽 및 채움
+        ctx.beginPath();
+        ctx.moveTo(-6, -2.5);
+        ctx.lineTo(2, -2.5);
+        ctx.lineTo(2, -6.5);
+        ctx.lineTo(9.5, 0);
+        ctx.lineTo(2, 6.5);
+        ctx.lineTo(2, 2.5);
+        ctx.lineTo(-6, 2.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      });
+      ctx.restore();
+
+      // 5. 중앙 텍스트: "새 구역"
+      ctx.fillStyle = '#3B2314';
+      ctx.font = '900 17px "Noto Sans KR", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('새 구역', 0, 12);
+
+      // 6. 하단 알약(Pill) 가격 배지 (#F7E3BA)
+      const pillW = 94;
+      const pillH = 26;
+      const pillY = 26;
+      ctx.fillStyle = '#F7E3BA';
+      roundRectPath(-pillW * 0.5, pillY, pillW, pillH, 13);
+      ctx.fill();
+
+      // 지폐 아이콘 (좌측)
+      ctx.save();
+      ctx.translate(-22, pillY + pillH * 0.5);
+      // 지폐 뭉치 3D 느낌
+      ctx.fillStyle = '#2E7D1E';
+      ctx.fillRect(-11, -4, 22, 11);
+      ctx.fillStyle = '#55C435';
+      ctx.strokeStyle = '#264E18';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.rect(-11, -7, 22, 11);
+      ctx.fill();
+      ctx.stroke();
+      // 지폐 중앙 띠
+      ctx.fillStyle = '#D9F7BE';
+      ctx.fillRect(-3.5, -6.2, 7, 9.4);
+      ctx.restore();
+
+      // 남은 금액 숫자 (200 -> 0 카운트다운)
+      const remainingCost = Math.max(0, Math.ceil(PAD_CONFIG.cost * (1 - state.padProgress)));
+      ctx.fillStyle = '#3B2314';
+      ctx.font = '900 18px "Noto Sans KR", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(remainingCost), -4, pillY + pillH * 0.5 + 1);
+
+      // 7. 발판 굵은 다크브라운 테두리 (#3B2314)
+      ctx.strokeStyle = '#3B2314';
+      ctx.lineWidth = 5;
+      roundRectPath(-half, -half, localSize, localSize, radius);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    /**
+     * 미해금 구역 중앙 자물쇠 & Lv.4 배지 (첨부 3번 GIF 디자인 및 걸이 열림 애니메이션)
+     */
+    function drawCenterPadlock() {
+      if (state.unlockPhase === 'animating_field' || state.unlockPhase === 'unlocked') return;
+      if (state.lockAlpha <= 0.01) return;
+
+      const cx = (LOCKED_RECT.x1 + LOCKED_RECT.x2) * 0.5;
+      const cy = (LOCKED_RECT.y1 + LOCKED_RECT.y2) * 0.5;
+      const pos = isoToScreen(cx, cy, 4);
 
       ctx.save();
       ctx.translate(pos.x, pos.y);
-      ctx.scale(sc, sc);
+      ctx.scale(state.scale * state.lockScale, state.scale * state.lockScale);
+      ctx.globalAlpha = state.lockAlpha;
 
-      // 캐릭터 발밑 그림자
-      ctx.fillStyle = 'rgba(59, 35, 20, 0.22)';
+      // 살짝 둥실거리는 대기 모션
+      const idleBob = state.unlockPhase === 'locked' ? Math.sin(performance.now() * 0.004) * 2.5 : 0;
+
+      // 1. 하단 올리브색 배지 ("Lv. 4" - 첨부 GIF 동일 스타일)
+      const badgeW = 92;
+      const badgeH = 30;
+      const badgeY = 12;
+      ctx.fillStyle = '#627941';
       ctx.beginPath();
-      ctx.ellipse(0, 2, 13 - bounce * 0.4, 6.5 - bounce * 0.2, 0, 0, Math.PI * 2);
+      ctx.roundRect(-badgeW * 0.5, badgeY, badgeW, badgeH, 15);
       ctx.fill();
 
-      ctx.translate(0, -bounce);
-      const outline = '#3b2314';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '900 17px "Noto Sans KR", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Lv. 4', 0, badgeY + badgeH * 0.5 + 1);
 
-      // 다리 (걷기 스윙)
-      const legSwing = PLAYER.isMoving ? Math.sin(PLAYER.walkCycle) * 4 : 0;
-      ctx.fillStyle = '#3b5998';
-      ctx.strokeStyle = outline;
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.roundRect(-7, -9 + legSwing * 0.4, 5.5, 9, 3);
-      ctx.fill(); ctx.stroke();
-      ctx.beginPath();
-      ctx.roundRect(1.5, -9 - legSwing * 0.4, 5.5, 9, 3);
-      ctx.fill(); ctx.stroke();
+      // 2. 자물쇠 본체 그룹
+      ctx.save();
+      ctx.translate(0, -14 + idleBob);
 
-      // 몸통 (상큼한 민트/화이트 유니폼)
-      ctx.fillStyle = '#4ecdc4';
+      // 자물쇠 U자형 걸이 (Shackle) - 해금 시 위로 열림!
+      ctx.save();
+      ctx.translate(0, -state.shackleLift);
+      if (state.shackleLift > 2) {
+        // 열릴 때 살짝 비틀어지는 생동감
+        ctx.rotate(-0.08 * Math.min(1, state.shackleLift / 16));
+      }
+
+      // 걸이 외곽선 & 은색 채움
+      ctx.lineWidth = 11;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#2D221B';
       ctx.beginPath();
-      ctx.roundRect(-10, -23, 20, 16, 7);
+      ctx.arc(0, -10, 14, Math.PI, 0, false);
+      ctx.lineTo(14, 4);
+      ctx.moveTo(-14, -10);
+      ctx.lineTo(-14, 4);
+      ctx.stroke();
+
+      ctx.lineWidth = 5.5;
+      ctx.strokeStyle = '#E2E6EC';
+      ctx.beginPath();
+      ctx.arc(0, -10, 14, Math.PI, 0, false);
+      ctx.lineTo(14, 4);
+      ctx.moveTo(-14, -10);
+      ctx.lineTo(-14, 4);
+      ctx.stroke();
+      ctx.restore();
+
+      // 자물쇠 황금색 몸통 (#FFD028)
+      const bodyW = 46;
+      const bodyH = 36;
+      const bodyY = -6;
+
+      // 몸통 채움
+      ctx.fillStyle = '#FFD028';
+      ctx.beginPath();
+      ctx.roundRect(-bodyW * 0.5, bodyY, bodyW, bodyH, 9);
+      ctx.fill();
+
+      // 상단 하이라이트 & 하단 음영
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-bodyW * 0.5, bodyY, bodyW, bodyH, 9);
+      ctx.clip();
+      ctx.fillStyle = '#FFE66D';
+      ctx.fillRect(-bodyW * 0.5, bodyY, bodyW, 6);
+      ctx.fillStyle = '#E6A817';
+      ctx.fillRect(-bodyW * 0.5, bodyY + bodyH - 6, bodyW, 6);
+      ctx.restore();
+
+      // 몸통 짙은 테두리
+      ctx.strokeStyle = '#2D221B';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.roundRect(-bodyW * 0.5, bodyY, bodyW, bodyH, 9);
+      ctx.stroke();
+
+      // 열쇠 구멍
+      ctx.fillStyle = '#2D221B';
+      ctx.beginPath();
+      ctx.arc(0, bodyY + 14, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-2.3, bodyY + 15);
+      ctx.lineTo(2.3, bodyY + 15);
+      ctx.lineTo(3.4, bodyY + 24);
+      ctx.lineTo(-3.4, bodyY + 24);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 5가지 해금 애니메이션 렌더링
+    // =========================================================================
+    function drawAnimatedNewField() {
+      const { x1, y1, x2, y2 } = LOCKED_RECT;
+      const progress = Math.min(1, state.fieldAnimTimer / state.fieldAnimDuration);
+
+      // -----------------------------------------------------------------------
+      // 모드 1: 타일 파도형식 (소단위 타일이 물결치듯 순차 생성)
+      // -----------------------------------------------------------------------
+      if (state.animMode === 'wave') {
+        const cols = 5;
+        const rows = 5;
+        const cellW = (x2 - x1) / cols;
+        const cellH = (y2 - y1) / rows;
+
+        // 아이소메트릭 깊이 정렬 순서 (back-to-front: i + j 오름차순)
+        const tiles = [];
+        for (let i = 0; i < cols; i++) {
+          for (let j = 0; j < rows; j++) {
+            const tx1 = x1 + i * cellW;
+            const ty1 = y1 + j * cellH;
+            const tx2 = tx1 + cellW;
+            const ty2 = ty1 + cellH;
+            const cx = (tx1 + tx2) * 0.5;
+            const cy = (ty1 + ty2) * 0.5;
+
+            // 해금 발판 쪽(x1, 0)에서 멀어지는 대각선+방사형 파도 딜레이
+            const waveDist = (i * 0.75 + Math.abs(j - 2) * 0.45) / 4.5;
+            const delay = waveDist * 0.52;
+            const localT = Math.max(0, Math.min(1, (progress - delay) / 0.48));
+
+            tiles.push({ i, j, tx1, ty1, tx2, ty2, cx, cy, localT });
+          }
+        }
+
+        // 깊이순 정렬 후 개별 소타일 렌더
+        tiles.sort((a, b) => (a.i + a.j) - (b.i + b.j));
+
+        tiles.forEach((tile) => {
+          if (tile.localT <= 0) return;
+          const ease = easeOutBack(tile.localT, 1.85);
+          const s = Math.max(0.01, Math.min(1.08, ease));
+          const zBounce = (1 - easeOutCubic(tile.localT)) * -26 + Math.sin(tile.localT * Math.PI) * 14;
+
+          const hw = (tile.tx2 - tile.tx1) * 0.5 * s;
+          const hh = (tile.ty2 - tile.ty1) * 0.5 * s;
+
+          drawIsoSlab(
+            tile.cx - hw,
+            tile.cy - hh,
+            tile.cx + hw,
+            tile.cy + hh,
+            zBounce,
+            {
+              showGrid: false,
+              drawShadow: true,
+              shadowAlpha: 0.16 * tile.localT,
+              shadowScale: s
+            }
+          );
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // 모드 2: 필드확장 (원래 있던 필드가 해금 구역 끝까지 주욱 늘어남)
+      // -----------------------------------------------------------------------
+      else if (state.animMode === 'expand') {
+        const ease = easeOutBack(progress, 1.15);
+        const currentX2 = x1 + (x2 - x1) * Math.max(0.02, ease);
+
+        drawIsoSlab(x1, y1, currentX2, y2, 0, {
+          showGrid: true,
+          drawShadow: true,
+          shadowAlpha: 0.22
+        });
+
+        // 늘어나는 선단(Leading Edge)에 에너지 라인 표시
+        if (progress < 0.96) {
+          const e1 = isoToScreen(currentX2, y1, 1);
+          const e2 = isoToScreen(currentX2, y2, 1);
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 4 * state.scale;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(e1.x, e1.y);
+          ctx.lineTo(e2.x, e2.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // 모드 3: 원형 확산 (플레이어 위치 기준 원형 파장이 퍼지며 원형 선에 맞춰 생성)
+      // -----------------------------------------------------------------------
+      else if (state.animMode === 'circle') {
+        const ox = state.circleOrigin.x;
+        const oy = state.circleOrigin.y;
+
+        // 시작점에서 미해금 구역의 가장 먼 꼭짓점까지의 월드 거리 계산
+        const corners = [
+          [x1, y1],
+          [x2, y1],
+          [x2, y2],
+          [x1, y2]
+        ];
+        let maxR = 0;
+        corners.forEach(([cx, cy]) => {
+          const d = Math.hypot(cx - ox, cy - oy);
+          if (d > maxR) maxR = d;
+        });
+        maxR += 0.35;
+
+        const currentR = maxR * easeOutCubic(progress);
+
+        // 월드 공간의 원을 아이소메트릭 화면 다각형 패스로 생성 (타일 X, 부드러운 원형 곡선)
+        const segments = 72;
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i <= segments; i++) {
+          const theta = (i / segments) * Math.PI * 2;
+          const wx = ox + Math.cos(theta) * currentR;
+          const wy = oy + Math.sin(theta) * currentR;
+          const sp = isoToScreen(wx, wy, 0);
+          if (i === 0) ctx.moveTo(sp.x, sp.y);
+          else ctx.lineTo(sp.x, sp.y);
+        }
+        ctx.closePath();
+
+        // 원형 클리핑 영역 내부에만 3D 새 필드 슬래브 렌더링 (측면 두께 포함 자연스러운 절단면)
+        ctx.save();
+        // 두께 영역까지 클리핑에 포함되도록 아래로 확장된 원형 기둥 패스
+        ctx.beginPath();
+        for (let i = 0; i <= segments; i++) {
+          const theta = (i / segments) * Math.PI * 2;
+          const wx = ox + Math.cos(theta) * currentR;
+          const wy = oy + Math.sin(theta) * currentR;
+          const sp = isoToScreen(wx, wy, 2);
+          if (i === 0) ctx.moveTo(sp.x, sp.y);
+          else ctx.lineTo(sp.x, sp.y);
+        }
+        ctx.closePath();
+        ctx.clip();
+
+        drawIsoSlab(x1, y1, x2, y2, 0, {
+          showGrid: true,
+          drawShadow: false
+        });
+        ctx.restore();
+
+        // 원형 파장 테두리 글로우 링 (바닥에 퍼지는 원형 선)
+        if (progress < 0.98) {
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+          ctx.lineWidth = 4.5 * state.scale;
+          ctx.beginPath();
+          for (let i = 0; i <= segments; i++) {
+            const theta = (i / segments) * Math.PI * 2;
+            const wx = ox + Math.cos(theta) * currentR;
+            const wy = oy + Math.sin(theta) * currentR;
+            const sp = isoToScreen(wx, wy, 0.5);
+            if (i === 0) ctx.moveTo(sp.x, sp.y);
+            else ctx.lineTo(sp.x, sp.y);
+          }
+          ctx.closePath();
+          ctx.stroke();
+
+          ctx.strokeStyle = 'rgba(130, 235, 65, 0.55)';
+          ctx.lineWidth = 10 * state.scale;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // -----------------------------------------------------------------------
+      // 모드 4: 필드 낙하 (미해금 구역 크기의 필드가 하늘에서 떨어짐)
+      // -----------------------------------------------------------------------
+      else if (state.animMode === 'drop') {
+        const dropPhaseEnd = 0.62;
+        let zHeight = 0;
+        let shadowAlpha = 0.22;
+        let shadowScale = 1;
+
+        if (progress < dropPhaseEnd) {
+          // 중력 가속 낙하 (t^2)
+          const t = progress / dropPhaseEnd;
+          const fall = 1 - t * t;
+          zHeight = fall * 340;
+          shadowAlpha = 0.08 + t * 0.22;
+          shadowScale = 0.65 + t * 0.35;
+        } else {
+          // 착지 후 미세 반동 바운스
+          const bounceT = (progress - dropPhaseEnd) / (1 - dropPhaseEnd);
+          zHeight = Math.sin(bounceT * Math.PI) * 14 * (1 - bounceT);
+        }
+
+        drawIsoSlab(x1, y1, x2, y2, zHeight, {
+          showGrid: true,
+          drawShadow: true,
+          shadowAlpha,
+          shadowScale
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // 모드 5: 튕김 (필드가 탄성 있게 튀어나오듯 구역을 채움)
+      // -----------------------------------------------------------------------
+      else if (state.animMode === 'bounce') {
+        const cx = (x1 + x2) * 0.5;
+        const cy = (y1 + y2) * 0.5;
+        const elastic = easeOutElastic(progress);
+        const s = Math.max(0.02, elastic);
+
+        const hw = (x2 - x1) * 0.5 * s;
+        const hh = (y2 - y1) * 0.5 * s;
+
+        drawIsoSlab(cx - hw, cy - hh, cx + hw, cy + hh, 0, {
+          showGrid: true,
+          drawShadow: true,
+          shadowAlpha: 0.22 * Math.min(1, progress * 2),
+          shadowScale: s
+        });
+      }
+    }
+
+    /**
+     * 귀여운 타이쿤 캐릭터 (3D 캡슐형 플레이어) 렌더링
+     */
+    function drawPlayer() {
+      const p = state.player;
+      const bob = Math.abs(Math.sin(p.walkCycle)) * 6;
+      const basePos = isoToScreen(p.x, p.y, 0);
+      const bodyPos = isoToScreen(p.x, p.y, bob);
+      const s = state.scale;
+
+      ctx.save();
+      // 바닥 그림자
+      ctx.fillStyle = 'rgba(45, 68, 20, 0.32)';
+      ctx.beginPath();
+      ctx.ellipse(basePos.x, basePos.y, 15 * s, 8 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.translate(bodyPos.x, bodyPos.y);
+      ctx.scale(s, s);
+
+      // 몸통 (파란 멜빵/셔츠 스타일 타이쿤 캐릭터)
+      ctx.fillStyle = '#3B82F6';
+      ctx.strokeStyle = '#2B1B12';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.roundRect(-11, -24, 22, 22, 10);
       ctx.fill();
       ctx.stroke();
 
-      // 앞치마 포인트
-      ctx.fillStyle = '#fffaf0';
+      // 머리
+      ctx.fillStyle = '#FFE0BD';
       ctx.beginPath();
-      ctx.roundRect(-6, -19, 12, 11, 3);
-      ctx.fill();
-
-      // 머리 (동글동글 치비 스타일)
-      ctx.fillStyle = '#ffe0bd';
-      ctx.beginPath();
-      ctx.arc(0, -33, 13, 0, Math.PI * 2);
+      ctx.arc(0, -32, 11.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // 귀여운 모자 (오렌지 바이저 캡)
-      ctx.fillStyle = '#ff7b39';
+      // 귀여운 모자 (타이쿤 매니저 캡)
+      ctx.fillStyle = '#FF6B4A';
       ctx.beginPath();
-      ctx.arc(0, -36, 13.2, Math.PI, 0, false);
+      ctx.arc(0, -34, 11.5, Math.PI, 0, false);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
-      // 챙 방향
-      const dirSign = (PLAYER.facingX - PLAYER.facingY) >= 0 ? 1 : -1;
-      ctx.fillStyle = '#ff985e';
+      // 모자 챙
+      ctx.fillStyle = '#FF6B4A';
       ctx.beginPath();
-      ctx.ellipse(dirSign * 6, -36, 9, 3.5, dirSign * 0.15, 0, Math.PI * 2);
+      ctx.ellipse(p.facing * 5, -34, 9, 3.2, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      // 눈 & 볼터치
-      const eyeOffsetX = dirSign * 3.5;
-      ctx.fillStyle = outline;
+      // 눈
+      ctx.fillStyle = '#2B1B12';
+      const eyeOffsetX = p.facing * 3.5;
       ctx.beginPath();
-      ctx.arc(eyeOffsetX - 3.5, -31.5, 1.8, 0, Math.PI * 2);
-      ctx.arc(eyeOffsetX + 3.5, -31.5, 1.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = 'rgba(255, 118, 118, 0.55)';
-      ctx.beginPath();
-      ctx.ellipse(eyeOffsetX - 6, -28.5, 2.5, 1.5, 0, 0, Math.PI * 2);
-      ctx.ellipse(eyeOffsetX + 6, -28.5, 2.5, 1.5, 0, 0, Math.PI * 2);
+      ctx.arc(eyeOffsetX - 2.5, -30, 1.6, 0, Math.PI * 2);
+      ctx.arc(eyeOffsetX + 3.5, -30, 1.6, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
     }
 
-    // 파티클 렌더링
-    function drawParticles() {
-      particles.forEach((pt) => {
-        const alpha = Math.max(0, pt.life / pt.maxLife);
+    /**
+     * 이동 클릭 리플 및 파티클 렌더링
+     */
+    function drawEffects() {
+      // 클릭 목표 지점 리플
+      state.ripples.forEach((rp) => {
+        const t = rp.life / rp.maxLife;
+        const sp = isoToScreen(rp.x, rp.y, 0.5);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - t})`;
+        ctx.lineWidth = 2.5 * state.scale;
+        ctx.beginPath();
+        ctx.ellipse(sp.x, sp.y, (8 + t * 22) * state.scale, (4 + t * 11) * state.scale, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      });
 
-        if (pt.type === 'ring') {
-          const pos = worldToScreen(pt.wx, pt.wy, pt.wz);
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.scale(1, 0.5);
-          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
-          ctx.lineWidth = 3 * ISO.scale;
+      // 파티클 렌더링
+      state.particles.forEach((pt) => {
+        const sp = isoToScreen(pt.x, pt.y, pt.z);
+        const t = pt.life / pt.maxLife;
+        ctx.save();
+        ctx.translate(sp.x, sp.y);
+        ctx.scale(state.scale, state.scale);
+
+        if (pt.type === 'cash') {
+          ctx.rotate(pt.rot);
+          ctx.fillStyle = '#55C435';
+          ctx.strokeStyle = '#264E18';
+          ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.arc(0, 0, pt.radius * ISO.scale, 0, Math.PI * 2);
+          ctx.rect(-10, -5.5, 20, 11);
+          ctx.fill();
           ctx.stroke();
-          ctx.restore();
-        } else if (pt.type === 'cash') {
-          const t = 1 - alpha;
-          const wx = pt.startX + (pt.endX - pt.startX) * t;
-          const wy = pt.startY + (pt.endY - pt.startY) * t;
-          const arcZ = Math.sin(t * Math.PI) * 38;
-          const wz = pt.startZ + (pt.endZ - pt.startZ) * t + arcZ;
-          const pos = worldToScreen(wx, wy, wz);
-
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.rotate(pt.rot + t * 4);
-          ctx.scale(ISO.scale, ISO.scale);
-          ctx.fillStyle = '#68c92e';
-          ctx.strokeStyle = '#3b2314';
-          ctx.lineWidth = 2;
-          ctx.fillRect(-9, -5.5, 18, 11);
-          ctx.strokeRect(-9, -5.5, 18, 11);
-          ctx.fillStyle = '#d7f598';
-          ctx.fillRect(-2.5, -5.5, 5, 11);
-          ctx.restore();
+          ctx.fillStyle = '#D9F7BE';
+          ctx.fillRect(-3, -4.8, 6, 9.6);
         } else if (pt.type === 'sparkle') {
-          const pos = worldToScreen(pt.wx, pt.wy, pt.wz);
-          ctx.save();
-          ctx.globalAlpha = alpha;
-          ctx.translate(pos.x, pos.y);
-          ctx.scale(ISO.scale * alpha, ISO.scale * alpha);
+          ctx.globalAlpha = 1 - t;
           ctx.fillStyle = pt.color;
-          ctx.strokeStyle = '#3b2314';
-          ctx.lineWidth = 1.8;
-
-          // 4각 반짝이 별 모양
-          const r = pt.size;
+          const r = pt.size * (1 - t * 0.4);
           ctx.beginPath();
-          ctx.moveTo(0, -r * 1.5);
-          ctx.quadraticCurveTo(0, 0, r * 1.5, 0);
-          ctx.quadraticCurveTo(0, 0, 0, r * 1.5);
-          ctx.quadraticCurveTo(0, 0, -r * 1.5, 0);
-          ctx.quadraticCurveTo(0, 0, 0, -r * 1.5);
+          ctx.moveTo(0, -r);
+          ctx.lineTo(r * 0.35, -r * 0.35);
+          ctx.lineTo(r, 0);
+          ctx.lineTo(r * 0.35, r * 0.35);
+          ctx.lineTo(0, r);
+          ctx.lineTo(-r * 0.35, r * 0.35);
+          ctx.lineTo(-r, 0);
+          ctx.lineTo(-r * 0.35, -r * 0.35);
+          ctx.closePath();
           ctx.fill();
-          ctx.stroke();
-          ctx.restore();
         } else if (pt.type === 'dust') {
-          const pos = worldToScreen(pt.wx, pt.wy, pt.wz);
-          ctx.save();
-          ctx.globalAlpha = alpha * 0.65;
-          ctx.fillStyle = '#fffaf0';
+          ctx.globalAlpha = (1 - t) * 0.7;
+          ctx.fillStyle = '#F4F7E8';
           ctx.beginPath();
-          ctx.arc(pos.x, pos.y, pt.size * ISO.scale * (1.2 - alpha * 0.4), 0, Math.PI * 2);
+          ctx.arc(0, 0, pt.size * (0.6 + t * 0.7), 0, Math.PI * 2);
           ctx.fill();
-          ctx.restore();
         }
+        ctx.restore();
       });
     }
 
-    // 전체 씬 렌더링
+    // =========================================================================
+    // 메인 렌더 루프
+    // =========================================================================
     function render() {
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.width / dpr;
-      const h = canvas.height / dpr;
-
       ctx.save();
-      ctx.scale(dpr, dpr);
+      ctx.scale(state.dpr, state.dpr);
 
-      // 카메라 마이크로 셰이크 적용
-      if (cameraShake.time > 0) {
-        const mag = cameraShake.intensity * (cameraShake.time / 0.28);
-        ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+      // 카메라 쉐이크 오프셋
+      if (state.cameraShake > 0.1) {
+        const sx = (Math.random() - 0.5) * state.cameraShake;
+        const sy = (Math.random() - 0.5) * state.cameraShake;
+        ctx.translate(sx, sy);
       }
 
-      // 1. 풀밭 & 격자 배경
-      drawBackground(w, h);
+      // 1. 배경 파스텔 잔디 그리드
+      drawBackground();
 
-      // 2. 미해금 구역 점선 테두리 (해금 전까지만 바닥에 표시)
-      if (UNLOCK_ANIM.phase === 'locked' || UNLOCK_ANIM.phase === 'padlock_seq') {
+      // 2. 미해금 구역 흰색 점선 표시 (해금 완료 전까지 바닥에 표시)
+      if (state.unlockPhase !== 'unlocked') {
         drawLockedDashedZone();
       }
 
-      // 3. 기존 해금된 필드 플랫폼 (4x4)
-      drawIsoPlatform(EXISTING_FIELD.minX, EXISTING_FIELD.maxX, EXISTING_FIELD.minY, EXISTING_FIELD.maxY, 0);
-
-      // 4. 새로 해금되는 필드 애니메이션 (5종)
-      drawUnlockingField();
-
-      // 5. 해금 발판 ("새 구역 / 200")
-      drawUnlockPad();
-
-      // 6. 플레이어 캐릭터 & 자물쇠 (깊이 순서 정렬)
-      if (PLAYER.x + PLAYER.y < PADLOCK.worldX + PADLOCK.worldY) {
-        drawPlayer();
-        drawPadlock();
+      // 3. 기존 해금된 필드 슬래브 (확장 모드일 때는 기존 필드가 직접 늘어나는 느낌을 위해 통합 처리)
+      if (state.unlockPhase === 'animating_field' && state.animMode === 'expand') {
+        // 기존 필드 + 늘어나는 새 필드를 하나의 연속된 3D 지형으로 렌더링
+        drawIsoSlab(UNLOCKED_RECT.x1, UNLOCKED_RECT.y1, UNLOCKED_RECT.x2, UNLOCKED_RECT.y2, 0, {
+          showGrid: true,
+          drawShadow: true
+        });
+        drawAnimatedNewField();
       } else {
-        drawPadlock();
-        drawPlayer();
+        // 기존 필드 렌더링
+        drawIsoSlab(UNLOCKED_RECT.x1, UNLOCKED_RECT.y1, UNLOCKED_RECT.x2, UNLOCKED_RECT.y2, 0, {
+          showGrid: true,
+          drawShadow: true
+        });
+
+        // 새로 해금 중이거나 해금 완료된 필드 렌더링
+        if (state.unlockPhase === 'animating_field') {
+          drawAnimatedNewField();
+        } else if (state.unlockPhase === 'unlocked') {
+          drawIsoSlab(LOCKED_RECT.x1, LOCKED_RECT.y1, LOCKED_RECT.x2, LOCKED_RECT.y2, 0, {
+            showGrid: true,
+            drawShadow: true
+          });
+        }
       }
 
-      // 7. 파티클 이펙트
-      drawParticles();
+      // 4. 해금 발판 (첨부 이미지 1, 2번 UI)
+      drawUnlockPad();
+
+      // 5. 플레이어 캐릭터
+      drawPlayer();
+
+      // 6. 미해금 구역 중앙 자물쇠 & Lv.4 배지 (첨부 3번 GIF)
+      drawCenterPadlock();
+
+      // 7. 지폐 비행 / 먼지 / 반짝이 파티클
+      drawEffects();
 
       ctx.restore();
     }
 
-    // ----------------------------------------------------------------------------
-    // 10. 반응형 리사이즈 & 메인 애니메이션 루프
-    // ----------------------------------------------------------------------------
-    function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
-
-      // 전체 8x4 월드(기존 4x4 + 신규 4x4)가 모바일/데스크톱 모두에서 화면 중앙에 예쁘게 들어오도록 자동 스케일링
-      const minDim = Math.min(w * 0.88, h * 1.15);
-      ISO.scale = Math.max(0.55, Math.min(1.22, minDim / 640));
-
-      // 월드 중심점 (4.0, 2.0)이 화면 정중앙(살짝 위쪽, 하단 HUD 고려)에 오도록 원점 보정
-      const hw = (ISO.tileW * ISO.scale) * 0.5;
-      const hh = (ISO.tileH * ISO.scale) * 0.5;
-      const centerWorldX = 4.0;
-      const centerWorldY = 2.0;
-
-      ISO.originX = w * 0.5 - (centerWorldX - centerWorldY) * hw;
-      ISO.originY = h * 0.47 - (centerWorldX + centerWorldY) * hh;
-    }
-
-    window.addEventListener('resize', resizeCanvas);
-
-    let lastTimestamp = 0;
-    function gameLoop(timestamp) {
-      if (!lastTimestamp) lastTimestamp = timestamp;
-      const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
-      lastTimestamp = timestamp;
+    function gameLoop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
 
       update(dt);
       render();
+
       requestAnimationFrame(gameLoop);
     }
 
     window.onload = function () {
       resizeCanvas();
-      resetSimulation(false);
+      lastTime = performance.now();
       requestAnimationFrame(gameLoop);
     };
   </script>
