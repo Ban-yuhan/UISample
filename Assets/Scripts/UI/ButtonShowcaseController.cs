@@ -12,9 +12,6 @@ namespace LogisticsTycoon.UI
     /// </summary>
     public class ButtonShowcaseController : MonoBehaviour
     {
-        [Header("Cross-Scene Navigation")]
-        [SerializeField] private Button btnGoToSceneA;
-
         [Header("Target Buttons")]
         [SerializeField] private UIButtonFeedback mainButton;
         [SerializeField] private UIButtonFeedback[] subButtons;
@@ -105,12 +102,6 @@ namespace LogisticsTycoon.UI
 
             if (btnReset != null)
                 btnReset.onClick.AddListener(ResetToDefaults);
-
-            if (btnGoToSceneA != null)
-            {
-                btnGoToSceneA.onClick.RemoveAllListeners();
-                btnGoToSceneA.onClick.AddListener(OnGoToSceneAClicked);
-            }
 
             // 쇼케이스 타깃 버튼 클릭 시 배너 피드백 연결
             if (mainButton != null)
@@ -373,32 +364,6 @@ namespace LogisticsTycoon.UI
             btnOrderRush = rushBtn;
             textOrderRush = rushTxt;
             imgOrderRush = rushImg;
-        }
-
-        public void SetNavigationButton(Button navBtn)
-        {
-            btnGoToSceneA = navBtn;
-            if (btnGoToSceneA != null)
-            {
-                btnGoToSceneA.onClick.RemoveAllListeners();
-                btnGoToSceneA.onClick.AddListener(OnGoToSceneAClicked);
-            }
-        }
-
-        public void OnGoToSceneAClicked()
-        {
-            if (TransitionManager.Instance != null && TransitionManager.Instance.IsTransitioning) return;
-
-            ShowBannerFeedback("🚚 [이동 중] 트랜지션 쇼케이스(SceneA)로 이동합니다...");
-
-            if (TransitionManager.Instance != null)
-            {
-                TransitionManager.Instance.TransitionToScene("SceneA", TransitionType.TruckWipe);
-            }
-            else
-            {
-                SceneManager.LoadScene("SceneA");
-            }
         }
 
         #endregion

@@ -27,6 +27,7 @@ namespace LogisticsTycoon.Transitions
         DeliveryDrone = FragileTape, // 하위 호환 매핑
         WorldMapPin,
         DiagonalMeteor,
+        BouncingBall,
         RandomReturn, // 신규 복귀 트랜지션 중 랜덤
         RandomAll
     }
@@ -70,6 +71,7 @@ namespace LogisticsTycoon.Transitions
         [SerializeField] private GameObject fragileTapePrefab;
         [SerializeField] private GameObject worldMapPinPrefab;
         [SerializeField] private GameObject diagonalMeteorPrefab;
+        [SerializeField] private GameObject bouncingBallPrefab;
 
         [Header("Runtime Settings")]
         [SerializeField] private float minimumLoadingTime = 1.45f;
@@ -130,6 +132,7 @@ namespace LogisticsTycoon.Transitions
             if (fragileTapePrefab == null) fragileTapePrefab = Resources.Load<GameObject>("Transitions/FragileTapeTransition");
             if (worldMapPinPrefab == null) worldMapPinPrefab = Resources.Load<GameObject>("Transitions/WorldMapPinTransition");
             if (diagonalMeteorPrefab == null) diagonalMeteorPrefab = Resources.Load<GameObject>("Transitions/DiagonalMeteorTransition");
+            if (bouncingBallPrefab == null) bouncingBallPrefab = Resources.Load<GameObject>("Transitions/BouncingBallTransition");
         }
 
         public void SetPrefabs(
@@ -145,7 +148,8 @@ namespace LogisticsTycoon.Transitions
             GameObject container,
             GameObject tape,
             GameObject mapPin,
-            GameObject meteor)
+            GameObject meteor,
+            GameObject bouncingBall = null)
         {
             gearCircleSmoothPrefab = gearSmooth;
             gearCirclePrefab = gearSmooth;
@@ -161,6 +165,7 @@ namespace LogisticsTycoon.Transitions
             fragileTapePrefab = tape;
             worldMapPinPrefab = mapPin;
             diagonalMeteorPrefab = meteor;
+            bouncingBallPrefab = bouncingBall;
         }
 
         /// <summary>
@@ -296,6 +301,7 @@ namespace LogisticsTycoon.Transitions
                 case TransitionType.FragileTape: return fragileTapePrefab;
                 case TransitionType.WorldMapPin: return worldMapPinPrefab;
                 case TransitionType.DiagonalMeteor: return diagonalMeteorPrefab;
+                case TransitionType.BouncingBall: return bouncingBallPrefab;
 
                 case TransitionType.RandomReturn:
                 {
@@ -308,7 +314,8 @@ namespace LogisticsTycoon.Transitions
                         containerDoorPrefab,
                         fragileTapePrefab,
                         worldMapPinPrefab,
-                        diagonalMeteorPrefab
+                        diagonalMeteorPrefab,
+                        bouncingBallPrefab
                     };
                     List<GameObject> valids = new List<GameObject>();
                     foreach (var p in returnPool) if (p != null) valids.Add(p);
@@ -333,7 +340,8 @@ namespace LogisticsTycoon.Transitions
                         containerDoorPrefab,
                         fragileTapePrefab,
                         worldMapPinPrefab,
-                        diagonalMeteorPrefab
+                        diagonalMeteorPrefab,
+                        bouncingBallPrefab
                     };
                     List<GameObject> valids = new List<GameObject>();
                     foreach (var p in allPool) if (p != null) valids.Add(p);

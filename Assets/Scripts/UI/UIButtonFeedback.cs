@@ -184,6 +184,7 @@ namespace LogisticsTycoon.UI
             if (targetBody != null)
             {
                 DOTween.Kill(targetBody);
+                targetBody.localRotation = Quaternion.identity;
             }
             if (shadowTransform != null)
             {
@@ -252,6 +253,7 @@ namespace LogisticsTycoon.UI
 
                 case MotionPreset.StampHit:
                     // 스탬프: 위로 살짝 들림 (Y +8px, Scale 1.05f)
+                    body.localRotation = Quaternion.identity;
                     Sequence prepSeq = DOTween.Sequence();
                     prepSeq.SetUpdate(true);
                     prepSeq.Join(body.DOAnchorPosY(originalBodyPos.y + 8f, 0.1f).SetEase(Ease.OutQuad));
@@ -353,13 +355,41 @@ namespace LogisticsTycoon.UI
                     break;
 
                 case MotionPreset.StampHit:
-                    // 스탬프 쾅!: 아래로 내려찍으며 PunchScale & PunchRotation
+                    // 스탬프 쾅!: 아래로 내려찍으며 PunchScale & PunchRotation (회전 드리프트 방지)
+                    body.localRotation = Quaternion.identity;
                     Sequence hitSeq = DOTween.Sequence();
                     hitSeq.SetUpdate(true);
                     hitSeq.Append(body.DOAnchorPosY(originalBodyPos.y, 0.05f).SetEase(Ease.InQuad));
                     hitSeq.Join(body.DOScale(originalScale, 0.05f).SetEase(Ease.InQuad));
+                    hitSeq.AppendCallback(() =>
+                    {
+                        if (body != null)
+                        {
+                            body.localRotation = Quaternion.identity;
+                            body.localScale = originalScale;
+                            body.anchoredPosition = originalBodyPos;
+                        }
+                    });
                     hitSeq.Append(body.DOPunchScale(Vector3.one * punchStrength, 0.35f, 10, 1f));
                     hitSeq.Join(body.DOPunchRotation(new Vector3(0, 0, 5f), 0.35f, 10, 1f));
+                    hitSeq.OnComplete(() =>
+                    {
+                        if (body != null)
+                        {
+                            body.localRotation = Quaternion.identity;
+                            body.localScale = originalScale;
+                            body.anchoredPosition = originalBodyPos;
+                        }
+                    });
+                    hitSeq.OnKill(() =>
+                    {
+                        if (body != null)
+                        {
+                            body.localRotation = Quaternion.identity;
+                            body.localScale = originalScale;
+                            body.anchoredPosition = originalBodyPos;
+                        }
+                    });
                     bodyTween = hitSeq;
                     break;
 

@@ -51,6 +51,9 @@ namespace LogisticsTycoon.Transitions.Editor
             // 4. 대각선 스트라이프 & 슬림 별똥별 택배 DiagonalMeteor 트랜지션 생성
             GameObject meteorPrefab = CreateDiagonalMeteorPrefab(capsuleSprite, circleSprite, starTailSprite);
 
+            // 5. 물리 바운싱 볼 BouncingBall 트랜지션 생성
+            GameObject bouncingBallPrefab = CreateBouncingBallPrefab(circleSprite);
+
             // Resources/Transitions 디렉토리에 프리팹 동기화 복사
             SyncPrefabsToResources();
 
@@ -64,13 +67,13 @@ namespace LogisticsTycoon.Transitions.Editor
             if (!EditorApplication.isPlaying)
             {
                 SetupSceneA(gearSmoothPrefab, gearTickPrefab, boxPrefab, truckPrefab, shutterPrefab, stampPrefab,
-                    forkliftPrefab, barcodePrefab, receiptRollPrefab, containerPrefab, fragileTapePrefab, mapPinPrefab, meteorPrefab);
+                    forkliftPrefab, barcodePrefab, receiptRollPrefab, containerPrefab, fragileTapePrefab, mapPinPrefab, meteorPrefab, bouncingBallPrefab);
 
                 SetupSceneB(gearSmoothPrefab, gearTickPrefab, boxPrefab, truckPrefab, shutterPrefab, stampPrefab,
-                    forkliftPrefab, barcodePrefab, receiptRollPrefab, containerPrefab, fragileTapePrefab, mapPinPrefab, meteorPrefab);
+                    forkliftPrefab, barcodePrefab, receiptRollPrefab, containerPrefab, fragileTapePrefab, mapPinPrefab, meteorPrefab, bouncingBallPrefab);
             }
 
-            Debug.Log("<color=#00FF00>[Logistics Tycoon]</color> 모든 트랜지션 프리팹 13종 리뉴얼 및 SceneA, SceneB, BuildSettings 셋업이 완벽히 완료되었습니다!");
+            Debug.Log("<color=#00FF00>[Logistics Tycoon]</color> 모든 트랜지션 프리팹 14종 리뉴얼 및 SceneA, SceneB, BuildSettings 셋업이 완벽히 완료되었습니다!");
         }
 
         public static void SyncPrefabsToResources()
@@ -3319,12 +3322,112 @@ namespace LogisticsTycoon.Transitions.Editor
             return root;
         }
 
+        private static GameObject CreateBouncingBallPrefab(Sprite circleSprite)
+        {
+            GameObject root = CreateBaseTransitionRoot("BouncingBallTransition");
+            var trans = root.AddComponent<BouncingBallTransition>();
+
+            // 1. 크림 배경 패널 (#EFEAE0)
+            GameObject bgGo = new GameObject("BgPanel", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(root.transform, false);
+            RectTransform bgRt = bgGo.GetComponent<RectTransform>();
+            bgRt.anchorMin = Vector2.zero;
+            bgRt.anchorMax = Vector2.one;
+            bgRt.offsetMin = Vector2.zero;
+            bgRt.offsetMax = Vector2.zero;
+            Image bgImg = bgGo.GetComponent<Image>();
+            bgImg.color = new Color(0.937f, 0.918f, 0.878f, 0f);
+            bgImg.raycastTarget = false;
+
+            // 2. 바닥 라인 (#DCD4C5, y = -400, 두께 3px)
+            GameObject floorGo = new GameObject("FloorLine", typeof(RectTransform), typeof(Image));
+            floorGo.transform.SetParent(root.transform, false);
+            RectTransform floorRt = floorGo.GetComponent<RectTransform>();
+            floorRt.anchorMin = new Vector2(0f, 0.5f);
+            floorRt.anchorMax = new Vector2(1f, 0.5f);
+            floorRt.pivot = new Vector2(0.5f, 1f);
+            floorRt.anchoredPosition = new Vector2(0f, -400f);
+            floorRt.sizeDelta = new Vector2(0f, 3f);
+            Image floorImg = floorGo.GetComponent<Image>();
+            floorImg.color = new Color(0.863f, 0.831f, 0.773f, 0f);
+            floorImg.raycastTarget = false;
+
+            // 3. 점선 궤적 도트 풀 (6x6 원형, #C4B8A5)
+            GameObject trailGo = new GameObject("TrailContainer", typeof(RectTransform));
+            trailGo.transform.SetParent(root.transform, false);
+            RectTransform trailRt = trailGo.GetComponent<RectTransform>();
+            trailRt.anchorMin = Vector2.zero;
+            trailRt.anchorMax = Vector2.one;
+            trailRt.offsetMin = Vector2.zero;
+            trailRt.offsetMax = Vector2.zero;
+
+            const int DotPoolSize = 160;
+            Image[] dots = new Image[DotPoolSize];
+            Color trailColor = new Color(0.769f, 0.722f, 0.647f, 1f);
+            for (int i = 0; i < DotPoolSize; i++)
+            {
+                GameObject dotGo = new GameObject($"Dot_{i:000}", typeof(RectTransform), typeof(Image));
+                dotGo.transform.SetParent(trailRt, false);
+                RectTransform dotRt = dotGo.GetComponent<RectTransform>();
+                dotRt.anchorMin = new Vector2(0.5f, 0.5f);
+                dotRt.anchorMax = new Vector2(0.5f, 0.5f);
+                dotRt.pivot = new Vector2(0.5f, 0.5f);
+                dotRt.sizeDelta = new Vector2(6f, 6f);
+                dotRt.anchoredPosition = Vector2.zero;
+
+                Image dotImg = dotGo.GetComponent<Image>();
+                dotImg.sprite = circleSprite;
+                dotImg.color = trailColor;
+                dotImg.raycastTarget = false;
+
+                dotGo.SetActive(false);
+                dots[i] = dotImg;
+            }
+
+            // 4. 메인 공 (#E4462B, 100x100)
+            GameObject ballGo = new GameObject("Ball", typeof(RectTransform), typeof(Image));
+            ballGo.transform.SetParent(root.transform, false);
+            RectTransform ballRt = ballGo.GetComponent<RectTransform>();
+            ballRt.anchorMin = new Vector2(0.5f, 0.5f);
+            ballRt.anchorMax = new Vector2(0.5f, 0.5f);
+            ballRt.pivot = new Vector2(0.5f, 0.5f);
+            ballRt.sizeDelta = new Vector2(100f, 100f);
+            ballRt.anchoredPosition = new Vector2(-700f, 170f);
+            ballRt.localScale = Vector3.zero;
+            Image ballImg = ballGo.GetComponent<Image>();
+            ballImg.sprite = circleSprite;
+            ballImg.color = new Color(0.894f, 0.275f, 0.169f, 1f);
+            ballImg.raycastTarget = false;
+
+            // SerializedObject 바인딩
+            SerializedObject so = new SerializedObject(trans);
+            so.FindProperty("canvasGroup").objectReferenceValue = root.GetComponent<CanvasGroup>();
+            so.FindProperty("container").objectReferenceValue = root.GetComponent<RectTransform>();
+            so.FindProperty("bgPanel").objectReferenceValue = bgImg;
+            so.FindProperty("floorLine").objectReferenceValue = floorImg;
+            so.FindProperty("trailContainer").objectReferenceValue = trailRt;
+            SerializedProperty dotsProp = so.FindProperty("trailDots");
+            dotsProp.arraySize = DotPoolSize;
+            for (int i = 0; i < DotPoolSize; i++)
+            {
+                dotsProp.GetArrayElementAtIndex(i).objectReferenceValue = dots[i];
+            }
+            so.FindProperty("ballRect").objectReferenceValue = ballRt;
+            so.FindProperty("ballImage").objectReferenceValue = ballImg;
+            so.ApplyModifiedProperties();
+
+            string prefabPath = $"{PrefabDir}/BouncingBallTransition.prefab";
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
         // ==================== SceneA & SceneB 자동 셋업 ====================
 
         public static void SetupSceneA(
             GameObject gearSmoothPf, GameObject gearTickPf, GameObject boxPf, GameObject truckPf, GameObject shutterPf, GameObject stampPf,
             GameObject forkliftPf, GameObject barcodePf, GameObject receiptRollPf, GameObject containerPf, GameObject fragileTapePf,
-            GameObject mapPinPf, GameObject meteorPf)
+            GameObject mapPinPf, GameObject meteorPf, GameObject bouncingBallPf = null)
         {
             EditorSceneManager.OpenScene("Assets/Scenes/SceneA.unity", OpenSceneMode.Single);
 
@@ -3360,7 +3463,7 @@ namespace LogisticsTycoon.Transitions.Editor
             if (tmGo == null) tmGo = new GameObject("[TransitionManager]");
             var transMgr = tmGo.GetComponent<TransitionManager>();
             if (transMgr == null) transMgr = tmGo.AddComponent<TransitionManager>();
-            transMgr.SetPrefabs(gearSmoothPf, gearTickPf, boxPf, truckPf, shutterPf, stampPf, forkliftPf, barcodePf, receiptRollPf, containerPf, fragileTapePf, mapPinPf, meteorPf);
+            transMgr.SetPrefabs(gearSmoothPf, gearTickPf, boxPf, truckPf, shutterPf, stampPf, forkliftPf, barcodePf, receiptRollPf, containerPf, fragileTapePf, mapPinPf, meteorPf, bouncingBallPf);
             transMgr.MinimumLoadingTime = 1.45f;
 
             // Demo Controller Object
@@ -3383,7 +3486,7 @@ namespace LogisticsTycoon.Transitions.Editor
         public static void SetupSceneB(
             GameObject gearSmoothPf, GameObject gearTickPf, GameObject boxPf, GameObject truckPf, GameObject shutterPf, GameObject stampPf,
             GameObject forkliftPf, GameObject barcodePf, GameObject receiptRollPf, GameObject containerPf, GameObject fragileTapePf,
-            GameObject mapPinPf, GameObject meteorPf)
+            GameObject mapPinPf, GameObject meteorPf, GameObject bouncingBallPf = null)
         {
             EditorSceneManager.OpenScene("Assets/Scenes/SceneB.unity", OpenSceneMode.Single);
 
@@ -3418,7 +3521,7 @@ namespace LogisticsTycoon.Transitions.Editor
             if (tmGo == null) tmGo = new GameObject("[TransitionManager]");
             var transMgr = tmGo.GetComponent<TransitionManager>();
             if (transMgr == null) transMgr = tmGo.AddComponent<TransitionManager>();
-            transMgr.SetPrefabs(gearSmoothPf, gearTickPf, boxPf, truckPf, shutterPf, stampPf, forkliftPf, barcodePf, receiptRollPf, containerPf, fragileTapePf, mapPinPf, meteorPf);
+            transMgr.SetPrefabs(gearSmoothPf, gearTickPf, boxPf, truckPf, shutterPf, stampPf, forkliftPf, barcodePf, receiptRollPf, containerPf, fragileTapePf, mapPinPf, meteorPf, bouncingBallPf);
             transMgr.MinimumLoadingTime = 1.45f;
 
             // SceneB Background Panel
@@ -3498,49 +3601,6 @@ namespace LogisticsTycoon.Transitions.Editor
             Transform oldNavBtn = canvasGo.transform.Find("Btn_GoToButtonScene");
             if (oldNavBtn != null) Object.DestroyImmediate(oldNavBtn.gameObject);
 
-            // 우측 상단 ButtonScene 이동 네비게이션 버튼 생성 (240 x 48)
-            GameObject navBtnGo = new GameObject("Btn_GoToButtonScene", typeof(RectTransform), typeof(Image), typeof(Button), typeof(Outline));
-            navBtnGo.transform.SetParent(canvasGo.transform, false);
-            RectTransform navRt = navBtnGo.GetComponent<RectTransform>();
-            navRt.anchorMin = new Vector2(1f, 1f);
-            navRt.anchorMax = new Vector2(1f, 1f);
-            navRt.pivot = new Vector2(1f, 1f);
-            navRt.anchoredPosition = new Vector2(-150f, -45f);
-            navRt.sizeDelta = new Vector2(240f, 48f);
-
-            Image navImg = navBtnGo.GetComponent<Image>();
-            navImg.color = new Color(0.169f, 0.243f, 0.314f, 1f); // #2B3E50 인더스트리얼 슬레이트 블루
-
-            Outline navOutline = navBtnGo.GetComponent<Outline>();
-            navOutline.effectColor = new Color(0.96f, 0.72f, 0.15f, 0.9f); // 골드 보더 테두리
-            navOutline.effectDistance = new Vector2(2f, -2f);
-
-            Button navBtn = navBtnGo.GetComponent<Button>();
-            ColorBlock navCb = navBtn.colors;
-            navCb.normalColor = new Color(0.169f, 0.243f, 0.314f, 1f);
-            navCb.highlightedColor = new Color(0.25f, 0.35f, 0.45f, 1f);
-            navCb.pressedColor = new Color(0.12f, 0.18f, 0.24f, 1f);
-            navCb.selectedColor = navCb.highlightedColor;
-            navBtn.colors = navCb;
-
-            GameObject navTxtGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
-            navTxtGo.transform.SetParent(navBtnGo.transform, false);
-            RectTransform navTxtRt = navTxtGo.GetComponent<RectTransform>();
-            navTxtRt.anchorMin = Vector2.zero;
-            navTxtRt.anchorMax = Vector2.one;
-            navTxtRt.offsetMin = new Vector2(8f, 2f);
-            navTxtRt.offsetMax = new Vector2(-8f, -2f);
-
-            Text navTxt = navTxtGo.GetComponent<Text>();
-            navTxt.text = "🔘 버튼 쇼케이스 이동 ➔";
-            navTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            navTxt.fontSize = 16;
-            navTxt.fontStyle = FontStyle.Bold;
-            navTxt.alignment = TextAnchor.MiddleCenter;
-            navTxt.color = new Color(1f, 0.95f, 0.88f, 1f);
-
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(navBtn.onClick, controller.OnGoToButtonSceneClicked);
-
             // 하단 컨트롤 패널 (1760 x 300)
             GameObject panelGo = new GameObject("DemoControlPanel", typeof(RectTransform), typeof(Image));
             panelGo.transform.SetParent(canvasGo.transform, false);
@@ -3583,7 +3643,7 @@ namespace LogisticsTycoon.Transitions.Editor
             statusTxt.alignment = TextAnchor.MiddleCenter;
             statusTxt.color = new Color(0.85f, 0.88f, 0.92f);
 
-            // 2. 14개 버튼 그리드 컨테이너 (GridLayoutGroup - 5열 배치: 5 + 5 + 4)
+            // 2. 15개 버튼 그리드 컨테이너 (GridLayoutGroup - 5열 배치: 5 + 5 + 5)
             GameObject gridGo = new GameObject("ButtonGrid", typeof(RectTransform), typeof(GridLayoutGroup));
             gridGo.transform.SetParent(panelGo.transform, false);
             RectTransform gridRt = gridGo.GetComponent<RectTransform>();
@@ -3601,7 +3661,7 @@ namespace LogisticsTycoon.Transitions.Editor
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 5;
 
-            // 14개 버튼 생성 (5열: 5 + 5 + 4)
+            // 15개 버튼 생성 (5열: 5 + 5 + 5)
             Button b1 = CreateDemoButton(gridGo.transform, "01. ⚙️ 톱니(회전)", new Color(0.96f, 0.58f, 0.23f));
             Button b2 = CreateDemoButton(gridGo.transform, "02. ⚙️ 톱니(철컥)", new Color(0.88f, 0.68f, 0.26f));
             Button b3 = CreateDemoButton(gridGo.transform, "03. 📦 택배박스", new Color(0.72f, 0.49f, 0.28f));
@@ -3617,7 +3677,8 @@ namespace LogisticsTycoon.Transitions.Editor
             Button b11 = CreateDemoButton(gridGo.transform, "11. ⚠️ 주의테이프", new Color(0.85f, 0.55f, 0.15f));
             Button b12 = CreateDemoButton(gridGo.transform, "12. 🗺️ 월드맵", new Color(0.30f, 0.65f, 0.40f));
             Button b13 = CreateDemoButton(gridGo.transform, "13. 🌠 별똥별메테오", new Color(0.95f, 0.48f, 0.24f));
-            Button b14 = CreateDemoButton(gridGo.transform, "14. 🎲 전체 랜덤", new Color(0.55f, 0.35f, 0.75f));
+            Button b14 = CreateDemoButton(gridGo.transform, "14. 🔴 바운싱 볼", new Color(0.894f, 0.275f, 0.169f));
+            Button b15 = CreateDemoButton(gridGo.transform, "15. 🎲 전체 랜덤", new Color(0.55f, 0.35f, 0.75f));
 
             // SerializedObject 바인딩
             SerializedObject so = new SerializedObject(controller);
@@ -3637,8 +3698,8 @@ namespace LogisticsTycoon.Transitions.Editor
             so.FindProperty("btn11FragileTape").objectReferenceValue = b11;
             so.FindProperty("btn12WorldMapPin").objectReferenceValue = b12;
             so.FindProperty("btn13DiagonalMeteor").objectReferenceValue = b13;
-            so.FindProperty("btn14RandomAll").objectReferenceValue = b14;
-            so.FindProperty("btnGoToButtonScene").objectReferenceValue = navBtn;
+            so.FindProperty("btn14BouncingBall").objectReferenceValue = b14;
+            so.FindProperty("btn15RandomAll").objectReferenceValue = b15;
             so.ApplyModifiedProperties();
 
             EditorUtility.SetDirty(controller);

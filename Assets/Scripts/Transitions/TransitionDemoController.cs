@@ -16,11 +16,7 @@ namespace LogisticsTycoon.Transitions
         [SerializeField] private Text headerText;
         [SerializeField] private Text statusText;
 
-        [Header("Cross-Scene Navigation")]
-        [SerializeField] private Button btnGoToButtonScene;
-        public Button BtnGoToButtonScene { get => btnGoToButtonScene; set => btnGoToButtonScene = value; }
-
-        [Header("Transition Navigation Buttons (01 ~ 14)")]
+        [Header("Transition Navigation Buttons (01 ~ 15)")]
         [SerializeField] private Button btn01GearCircleSmooth;
         [SerializeField] private Button btn02GearCircleTick;
         [SerializeField] private Button btn03BoxFlap;
@@ -34,7 +30,8 @@ namespace LogisticsTycoon.Transitions
         [SerializeField] private Button btn11FragileTape;
         [SerializeField] private Button btn12WorldMapPin;
         [SerializeField] private Button btn13DiagonalMeteor;
-        [SerializeField] private Button btn14RandomAll;
+        [SerializeField] private Button btn14BouncingBall;
+        [SerializeField] private Button btn15RandomAll;
 
         private void Awake()
         {
@@ -76,32 +73,8 @@ namespace LogisticsTycoon.Transitions
             BindButton(btn11FragileTape, TransitionType.FragileTape, "11. ⚠️ 주의테이프");
             BindButton(btn12WorldMapPin, TransitionType.WorldMapPin, "12. 🗺️ 월드맵");
             BindButton(btn13DiagonalMeteor, TransitionType.DiagonalMeteor, "13. 🌠 별똥별메테오");
-            BindButton(btn14RandomAll, TransitionType.RandomAll, "14. 🎲 전체 랜덤");
-
-            if (btnGoToButtonScene != null)
-            {
-                btnGoToButtonScene.onClick.RemoveAllListeners();
-                btnGoToButtonScene.onClick.AddListener(OnGoToButtonSceneClicked);
-            }
-        }
-
-        public void OnGoToButtonSceneClicked()
-        {
-            if (TransitionManager.Instance != null && TransitionManager.Instance.IsTransitioning) return;
-
-            if (statusText != null)
-            {
-                statusText.text = "[이동 중] 🔘 버튼 쇼케이스(ButtonScene)로 이동합니다...";
-            }
-
-            if (TransitionManager.Instance != null)
-            {
-                TransitionManager.Instance.TransitionToScene("ButtonScene", TransitionType.RandomAll);
-            }
-            else
-            {
-                SceneManager.LoadScene("ButtonScene");
-            }
+            BindButton(btn14BouncingBall, TransitionType.BouncingBall, "14. 🔴 바운싱 볼");
+            BindButton(btn15RandomAll, TransitionType.RandomAll, "15. 🎲 전체 랜덤");
         }
 
         private void BindButton(Button btn, TransitionType type, string label)

@@ -97,7 +97,7 @@ namespace LogisticsTycoon.UI.Editor
             SetStretch(fxContainerRect);
 
             // Header / Title Panel (딥 네이비 슬레이트 카드 + 웜 골드/아이보리 텍스트)
-            Text currentModeText = CreateHeader(canvasRect, roundedBoxSprite, out Button btnGoToSceneA);
+            Text currentModeText = CreateHeader(canvasRect, roundedBoxSprite);
 
             // Center Panel (밀크 화이트 카드 + 머스타드 옐로우 배송 버튼 & 서브 버튼 3종)
             CreateCenterShowcase(
@@ -190,16 +190,6 @@ namespace LogisticsTycoon.UI.Editor
                 txtOrderRush,
                 imgOrderRush
             );
-
-            if (btnGoToSceneA != null)
-            {
-                controller.SetNavigationButton(btnGoToSceneA);
-                UnityEditor.Events.UnityEventTools.AddPersistentListener(btnGoToSceneA.onClick, controller.OnGoToSceneAClicked);
-                EditorUtility.SetDirty(controller);
-            }
-
-            // Build Settings 3개 씬 통합 동기화
-            LogisticsTycoon.Transitions.Editor.TransitionPrefabBuilder.EnsureBuildSettingsScenes();
 
             // 계층 정렬: OrderRushOverlay는 FX_Container 바로 아래, FX_Container는 최상단(LastSibling)
             orderRushObj.transform.SetAsLastSibling();
@@ -536,7 +526,7 @@ namespace LogisticsTycoon.UI.Editor
             img.raycastTarget = false;
         }
 
-        private static Text CreateHeader(RectTransform canvasRect, Sprite roundedSprite, out Button btnGoToSceneA)
+        private static Text CreateHeader(RectTransform canvasRect, Sprite roundedSprite)
         {
             GameObject headerObj = CreateUIElement("HeaderPanel", canvasRect);
             RectTransform rt = headerObj.GetComponent<RectTransform>();
@@ -594,47 +584,6 @@ namespace LogisticsTycoon.UI.Editor
             statusTxt.supportRichText = true;
             statusTxt.text = "[선택 모드]: <b>1. 젤리 스쿼시 (Jelly Squash)</b> | [활성 FX]: 물결 리플 ON | 플로팅 텍스트 ON";
             statusTxt.raycastTarget = false;
-
-            // Header 우측: [ 🚚 트랜지션 씬(SceneA) 이동 ➔ ] 네비게이션 버튼 (260 x 48)
-            GameObject navBtnObj = CreateUIElement("Btn_GoToSceneA", rt);
-            RectTransform navRt = navBtnObj.GetComponent<RectTransform>();
-            navRt.anchorMin = new Vector2(1f, 0.5f);
-            navRt.anchorMax = new Vector2(1f, 0.5f);
-            navRt.pivot = new Vector2(1f, 0.5f);
-            navRt.anchoredPosition = new Vector2(-24f, 0f);
-            navRt.sizeDelta = new Vector2(260f, 48f);
-
-            Image navImg = navBtnObj.AddComponent<Image>();
-            navImg.sprite = roundedSprite;
-            navImg.type = Image.Type.Sliced;
-            navImg.color = new Color(0.96f, 0.58f, 0.23f, 1f); // 따뜻한 앰버 골드 (#F5943A)
-
-            Shadow navShadow = navBtnObj.AddComponent<Shadow>();
-            navShadow.effectColor = new Color(0.1f, 0.1f, 0.1f, 0.5f);
-            navShadow.effectDistance = new Vector2(2f, -2f);
-
-            btnGoToSceneA = navBtnObj.AddComponent<Button>();
-            ColorBlock navCb = btnGoToSceneA.colors;
-            navCb.normalColor = new Color(0.96f, 0.58f, 0.23f, 1f);
-            navCb.highlightedColor = new Color(1f, 0.68f, 0.35f, 1f);
-            navCb.pressedColor = new Color(0.85f, 0.48f, 0.15f, 1f);
-            navCb.selectedColor = navCb.highlightedColor;
-            btnGoToSceneA.colors = navCb;
-
-            GameObject navTxtObj = CreateUIElement("Text", navRt);
-            RectTransform navTxtRt = navTxtObj.GetComponent<RectTransform>();
-            SetStretch(navTxtRt);
-            navTxtRt.offsetMin = new Vector2(8f, 2f);
-            navTxtRt.offsetMax = new Vector2(-8f, -2f);
-
-            Text navTxt = navTxtObj.AddComponent<Text>();
-            navTxt.font = arialFont;
-            navTxt.fontSize = 16;
-            navTxt.fontStyle = FontStyle.Bold;
-            navTxt.alignment = TextAnchor.MiddleCenter;
-            navTxt.color = Color.white;
-            navTxt.text = "🚚 트랜지션 씬(SceneA) 이동 ➔";
-            navTxt.raycastTarget = false;
 
             return statusTxt;
         }
