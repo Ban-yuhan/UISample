@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1440, height=1440, initial-scale=1.0" />
+  <title>AP CENTER — Logistics UI Motion (1440x1440)</title>
+  <!-- Geist & Pretendard Webfonts -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-sans/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist-mono/style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+
+  <style>
+    :root {
+      --bg-cream: #F5EFE6;
+      --bg-card: #FDFBF7;
+      --charcoal: #2C221E;
+      --mustard: #F2B705;
+      --coral: #FF6B6B;
+      --kraft: #E6D7C3;
+      --font-ui: 'Geist', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'Geist Mono', 'Pretendard', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    html, body {
+      width: 1440px;
+      height: 1440px;
+      overflow: hidden;
+      background-color: var(--bg-cream);
+      font-family: var(--font-ui);
+      color: var(--charcoal);
+    }
+
+    /* Viewport & Camera Rig (절대 will-change 사용 금지) */
+    #viewport {
+      position: relative;
+      width: 1440px;
+      height: 1440px;
+      overflow: hidden;
+      background-color: var(--bg-cream);
+    }
+
+    /* 미세한 도면 그리드 배경 */
+    #bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(44, 34, 30, 0.04) 2px, transparent 2px),
+        linear-gradient(to bottom, rgba(44, 34, 30, 0.04) 2px, transparent 2px);
+      background-size: 120px 120px;
+      pointer-events: none;
+    }
+
+    #camera {
+      position: absolute;
+      left: 720px;
+      top: 720px;
+      width: 0;
+      height: 0;
+    }
+
+    /* 중앙 모핑 컨테이너 (States 1 ~ 7) */
+    #morph-shell {
+      position: absolute;
+      left: 0;
+      top: 0;
+      border-style: solid;
+      border-color: var(--charcoal);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .state-layer {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    /* State 01: 주문 버튼 */
+    .btn-content {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      white-space: nowrap;
+    }
+    .btn-badge {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: var(--coral);
+      border: 5px solid var(--charcoal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-text {
+      font-size: 46px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--charcoal);
+    }
+    .btn-sub {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 700;
+      padding: 8px 18px;
+      background: var(--bg-card);
+      border: 4px solid var(--charcoal);
+      border-radius: 999px;
+    }
+
+    /* State 02: 로더 */
+    .loader-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 22px;
+    }
+    .loader-pct {
+      font-family: var(--font-mono);
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    /* State 03: 발송 시작 */
+    .dispatch-wrap {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      white-space: nowrap;
+    }
+    .dispatch-icon {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: var(--mustard);
+      border: 5px solid var(--charcoal);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .dispatch-title {
+      font-size: 50px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--bg-card);
+    }
+    .dispatch-tag {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--charcoal);
+      background: var(--coral);
+      border: 4px solid var(--charcoal);
+      padding: 8px 20px;
+      border-radius: 14px;
+    }
+
+    /* State 04: 스피드라인 5개 */
+    .speedlines-wrap {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .speed-line {
+      position: absolute;
+      height: 22px;
+      border-radius: 999px;
+      border: 5px solid var(--charcoal);
+    }
+
+    /* State 05: 주문서 */
+    .order-wrap {
+      width: 100%;
+      height: 100%;
+      padding: 48px 44px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 5px solid var(--charcoal);
+      padding-bottom: 24px;
+    }
+    .order-title {
+      font-size: 40px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+    .order-id {
+      font-family: var(--font-mono);
+      font-size: 26px;
+      font-weight: 800;
+      background: var(--mustard);
+      border: 4px solid var(--charcoal);
+      padding: 6px 16px;
+      border-radius: 10px;
+    }
+    .order-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    .order-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-cream);
+      border: 4px solid var(--charcoal);
+      border-radius: 16px;
+      padding: 18px 24px;
+    }
+    .order-row-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .order-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      border: 4px solid var(--charcoal);
+    }
+    .order-qty {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 800;
+    }
+    .order-footer {
+      border-top: 5px dashed var(--charcoal);
+      padding-top: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* State 06: 다양한 종류의 상품 (2x2 그리드) */
+    .items-grid {
+      width: 100%;
+      height: 100%;
+      padding: 44px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 28px;
+    }
+    .item-slot {
+      background: var(--bg-cream);
+      border: 5px solid var(--charcoal);
+      border-radius: 26px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      position: relative;
+    }
+    .item-label {
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    /* State 07: 박스 포장 및 테이핑 */
+    .box-pack-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .box-flap-top, .box-flap-bottom {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 51%;
+      background: var(--mustard);
+      border-color: var(--charcoal);
+      border-style: solid;
+    }
+    .box-flap-top {
+      top: 0;
+      border-width: 0 0 6px 0;
+      transform-origin: top center;
+    }
+    .box-flap-bottom {
+      bottom: 0;
+      border-width: 6px 0 0 0;
+      transform-origin: bottom center;
+    }
+    .box-tape-h {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      height: 64px;
+      margin-top: -32px;
+      background: var(--coral);
+      border-top: 6px solid var(--charcoal);
+      border-bottom: 6px solid var(--charcoal);
+      transform-origin: left center;
+    }
+    .box-shipping-sticker {
+      position: absolute;
+      right: 42px;
+      bottom: 42px;
+      width: 150px;
+      height: 100px;
+      background: var(--bg-card);
+      border: 5px solid var(--charcoal);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Stage Layer (States 08 ~ 13: 파렛트, 지게차, 트럭, 로고) */
+    #stage-world {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .stage-floor-line {
+      position: absolute;
+      left: -650px;
+      top: 260px;
+      width: 1300px;
+      height: 8px;
+      background: var(--charcoal);
+      border-radius: 4px;
+      transform-origin: center center;
+    }
+
+    /* 커서 레이어 */
+    #cursor-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    /* 브라우저 프리뷰 컨트롤러 (렌더 모드에서는 자동 숨김) */
+    #preview-ui {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(44, 34, 30, 0.94);
+      color: var(--bg-cream);
+      padding: 14px 24px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: var(--font-mono);
+      font-size: 16px;
+      z-index: 9999;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    }
+    body.render-mode #preview-ui {
+      display: none !important;
+    }
+    #preview-ui button {
+      background: var(--mustard);
+      color: var(--charcoal);
+      border: none;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      cursor: pointer;
+    }
+    #preview-ui button.secondary {
+      background: var(--coral);
+    }
+    #preview-ui input[type="range"] {
+      width: 340px;
+      accent-color: var(--mustard);
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport">
+    <div id="bg-grid"></div>
+
+    <div id="camera">
+      <!-- 1. 다중 오브젝트 물리 스테이지 (State 08 ~ 13) -->
+      <div id="stage-world">
+        <div id="floor-line" class="stage-floor-line"></div>
+
+        <!-- State 08 ~ 09: 지게차 + 파렛트 + 적재 상자 그룹 -->
+        <svg id="logistics-scene-svg" width="1600" height="1200" viewBox="-800 -600 1600 1200" style="position:absolute; left:-800px; top:-600px; overflow:visible;">
+          <!-- 지게차 그룹 -->
+          <g id="forklift-group">
+            <!-- 마스트(수직 기둥) -->
+            <rect x="-240" y="-180" width="24" height="390" rx="8" fill="#2C221E" />
+            <rect x="-216" y="-150" width="12" height="340" fill="#F2B705" stroke="#2C221E" stroke-width="5" />
+            <!-- 지게차 본체 -->
+            <path d="M -520 80 L -520 -20 Q -520 -60 -480 -60 L -380 -60 L -340 -160 L -250 -160 L -240 190 L -520 190 Z" fill="#F2B705" stroke="#2C221E" stroke-width="8" stroke-linejoin="round" />
+            <!-- 운전석 캐빈 프레임 -->
+            <path d="M -450 -60 L -430 -160 L -255 -160 L -255 60 L -450 60 Z" fill="#F5EFE6" stroke="#2C221E" stroke-width="8" stroke-linejoin="round" />
+            <!-- 시트 & 핸들 -->
+            <rect x="-420" y="0" width="55" height="60" rx="10" fill="#2C221E" />
+            <line x1="-310" y1="0" x2="-280" y2="55" stroke="#2C221E" stroke-width="8" stroke-linecap="round" />
+            <line x1="-330" y1="-5" x2="-290" y2="5" stroke="#2C221E" stroke-width="8" stroke-linecap="round" />
+            <!-- 후면 카운터웨이트 포인트 (코랄) -->
+            <path d="M -520 90 L -430 90 L -430 190 L -520 190 Z" fill="#FF6B6B" stroke="#2C221E" stroke-width="8" stroke-linejoin="round" />
+            <!-- 지게차 바퀴 -->
+            <g transform="translate(-455, 195)">
+              <circle r="52" fill="#2C221E" />
+              <circle r="22" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+            </g>
+            <g transform="translate(-290, 195)">
+              <circle r="52" fill="#2C221E" />
+              <circle r="22" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+            </g>
+            <!-- 포크(Fork) 날개 -->
+            <g id="forklift-forks">
+              <rect x="-220" y="120" width="22" height="90" rx="6" fill="#2C221E" />
+              <rect x="-210" y="192" width="460" height="20" rx="6" fill="#2C221E" />
+            </g>
+          </g>
+
+          <!-- 파렛트 + 적재 상자 4개 그룹 (리프팅 시 함께 이동) -->
+          <g id="pallet-stack-group">
+            <!-- 파렛트 베이스 -->
+            <g id="pallet-base">
+              <rect x="-180" y="156" width="420" height="36" rx="8" fill="#FF6B6B" stroke="#2C221E" stroke-width="8" />
+              <rect x="-155" y="166" width="70" height="16" rx="4" fill="#2C221E" />
+              <rect x="-5" y="166" width="70" height="16" rx="4" fill="#2C221E" />
+              <rect x="145" y="166" width="70" height="16" rx="4" fill="#2C221E" />
+            </g>
+
+            <!-- 낙하 상자 1 (좌하단) -->
+            <g id="drop-box-1">
+              <rect x="-160" y="6" width="190" height="150" rx="14" fill="#F2B705" stroke="#2C221E" stroke-width="8" />
+              <rect x="-85" y="6" width="40" height="65" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+              <line x1="-130" y1="120" x2="-80" y2="120" stroke="#2C221E" stroke-width="7" stroke-linecap="round" />
+            </g>
+            <!-- 낙하 상자 2 (우하단) -->
+            <g id="drop-box-2">
+              <rect x="30" y="26" width="190" height="130" rx="14" fill="#FF6B6B" stroke="#2C221E" stroke-width="8" />
+              <rect x="105" y="26" width="40" height="55" fill="#F2B705" stroke="#2C221E" stroke-width="6" />
+              <line x1="60" y1="122" x2="115" y2="122" stroke="#2C221E" stroke-width="7" stroke-linecap="round" />
+            </g>
+            <!-- 낙하 상자 3 (좌상단) -->
+            <g id="drop-box-3">
+              <rect x="-140" y="-124" width="175" height="130" rx="14" fill="#FDFBF7" stroke="#2C221E" stroke-width="8" />
+              <rect x="-72" y="-124" width="40" height="55" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+              <line x1="-110" y1="-30" x2="-60" y2="-30" stroke="#2C221E" stroke-width="7" stroke-linecap="round" />
+            </g>
+            <!-- 낙하 상자 4 (우상단) -->
+            <g id="drop-box-4">
+              <rect x="35" y="-114" width="170" height="140" rx="14" fill="#F2B705" stroke="#2C221E" stroke-width="8" />
+              <rect x="100" y="-114" width="40" height="60" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+              <line x1="65" y1="-10" x2="115" y2="-10" stroke="#2C221E" stroke-width="7" stroke-linecap="round" />
+            </g>
+          </g>
+
+          <!-- State 10 ~ 12: 배송 트럭 그룹 (앞뒤 끝 Squash & Stretch 적용) -->
+          <g id="truck-group">
+            <!-- 배기구 연기 도형 3개 -->
+            <circle id="exhaust-1" cx="-430" cy="150" r="18" fill="#FF6B6B" stroke="#2C221E" stroke-width="6" />
+            <circle id="exhaust-2" cx="-475" cy="130" r="26" fill="#F2B705" stroke="#2C221E" stroke-width="6" />
+            <circle id="exhaust-3" cx="-530" cy="105" r="34" fill="#FDFBF7" stroke="#2C221E" stroke-width="6" />
+
+            <!-- 트럭 본체 (앞코/뒤끝 개별 스프링 변형용 컨테이너) -->
+            <g id="truck-body-deform">
+              <!-- 적재함(Cargo Box) -->
+              <rect x="-390" y="-210" width="540" height="350" rx="28" fill="#F2B705" stroke="#2C221E" stroke-width="10" />
+              <!-- 적재함 코랄 스트라이프 & 박스 심볼 -->
+              <rect x="-390" y="30" width="540" height="55" fill="#FF6B6B" stroke="#2C221E" stroke-width="8" />
+              <text x="-120" y="-45" text-anchor="middle" font-family="Geist, Pretendard, sans-serif" font-size="74" font-weight="900" fill="#2C221E" letter-spacing="-2">AP EXPRESS</text>
+
+              <!-- 트럭 운전석(Cab) -->
+              <path d="M 150 -90 L 310 -90 Q 345 -90 360 -55 L 410 50 Q 420 75 420 100 L 420 140 L 150 140 Z" fill="#FF6B6B" stroke="#2C221E" stroke-width="10" stroke-linejoin="round" />
+              <!-- 운전석 창문 -->
+              <path d="M 190 -50 L 305 -50 Q 325 -50 335 -30 L 368 42 L 190 42 Z" fill="#FDFBF7" stroke="#2C221E" stroke-width="8" stroke-linejoin="round" />
+              <!-- 범퍼 -->
+              <rect x="-410" y="125" width="850" height="36" rx="12" fill="#2C221E" />
+
+              <!-- 헤드라이트 빔 (시동 시 점등) -->
+              <g id="truck-headlight">
+                <polygon points="425,75 620,20 620,155 425,115" fill="#F2B705" opacity="0.85" />
+                <rect x="405" y="70" width="24" height="44" rx="8" fill="#FDFBF7" stroke="#2C221E" stroke-width="6" />
+              </g>
+
+              <!-- 트럭 바퀴 2개 -->
+              <g id="truck-wheel-rear" transform="translate(-210, 175)">
+                <circle r="68" fill="#2C221E" />
+                <circle r="30" fill="#F2B705" stroke="#2C221E" stroke-width="8" />
+                <line x1="-30" y1="0" x2="30" y2="0" stroke="#2C221E" stroke-width="8" />
+              </g>
+              <g id="truck-wheel-front" transform="translate(275, 175)">
+                <circle r="68" fill="#2C221E" />
+                <circle r="30" fill="#F2B705" stroke="#2C221E" stroke-width="8" />
+                <line x1="-30" y1="0" x2="30" y2="0" stroke="#2C221E" stroke-width="8" />
+              </g>
+            </g>
+          </g>
+
+          <!-- State 13: AP CENTER 최종 로고 (크롭해주신 이미지와 1:1 동일한 구성) -->
+          <g id="ap-logo-group">
+            <!-- 좌측 아이소메트릭 박스 심볼 (중심: -380, 0) -->
+            <g id="ap-logo-cube" transform="translate(-395, 0)">
+              <!-- 상단 면 (머스타드 옐로우) -->
+              <polygon points="0,-135 125,-70 0,-5 -125,-70" fill="#F2B705" stroke="#2C221E" stroke-width="10" stroke-linejoin="round" />
+              <!-- 좌측 면 (머스타드 옐로우) -->
+              <polygon points="-125,-70 0,-5 0,135 -125,70" fill="#F2B705" stroke="#2C221E" stroke-width="10" stroke-linejoin="round" />
+              <!-- 우측 면 (소프트 코랄) -->
+              <polygon points="0,-5 125,-70 125,70 0,135" fill="#FF6B6B" stroke="#2C221E" stroke-width="10" stroke-linejoin="round" />
+              <!-- 상단 코랄 테이프 스트립 -->
+              <polygon points="-78,-94 -46,-111 79,-46 47,-29" fill="#FF6B6B" stroke="#2C221E" stroke-width="9" stroke-linejoin="round" />
+              <!-- 우측 면으로 내려오는 머스타드 테이프 탭 -->
+              <polygon points="47,-29 79,-46 79,5 47,22" fill="#F2B705" stroke="#2C221E" stroke-width="9" stroke-linejoin="round" />
+              <!-- 좌측 면 화살표 디테일 -->
+              <polyline points="-122,2 -32,49" fill="none" stroke="#2C221E" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+              <polyline points="-58,12 -30,50 -68,62" fill="none" stroke="#2C221E" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+              <!-- 우측 면 하단 바코드/송장 라인 2줄 -->
+              <line x1="26" y1="88" x2="72" y2="64" stroke="#2C221E" stroke-width="10" stroke-linecap="round" />
+              <line x1="26" y1="110" x2="58" y2="93" stroke="#2C221E" stroke-width="10" stroke-linecap="round" />
+            </g>
+
+            <!-- 우측 AP CENTER 볼드 타이포그래피 -->
+            <text id="ap-logo-text" x="-210" y="48" font-family="Geist, Pretendard, sans-serif" font-size="146" font-weight="900" fill="#2C221E" letter-spacing="-4">AP CENTER</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 2. 메인 모핑 컨테이너 (States 01 ~ 07) -->
+      <div id="morph-shell">
+        <!-- State 01: 주문버튼 -->
+        <div id="layer-s1" class="state-layer">
+          <div class="btn-content">
+            <div class="btn-badge">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2C221E" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                <path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>
+              </svg>
+            </div>
+            <span class="btn-text">주문 접수</span>
+            <span class="btn-sub">ORD-2026</span>
+          </div>
+        </div>
+
+        <!-- State 02: 로더 -->
+        <div id="layer-s2" class="state-layer">
+          <div class="loader-wrap">
+            <svg width="136" height="136" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="46" fill="none" stroke="#E6D7C3" stroke-width="12" />
+              <circle id="loader-arc" cx="60" cy="60" r="46" fill="none" stroke="#FF6B6B" stroke-width="12" stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289" transform="rotate(-90 60 60)" />
+            </svg>
+            <div id="loader-pct" class="loader-pct">0%</div>
+          </div>
+        </div>
+
+        <!-- State 03: 발송시작 -->
+        <div id="layer-s3" class="state-layer">
+          <div class="dispatch-wrap">
+            <div class="dispatch-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2C221E" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <span class="dispatch-title">발송 시작</span>
+            <span class="dispatch-tag">INBOUND → HUB</span>
+          </div>
+        </div>
+
+        <!-- State 04: 스피드라인 5개 (정렬되지 않고 빠르게 교차) -->
+        <div id="layer-s4" class="state-layer">
+          <div class="speedlines-wrap">
+            <div id="sline-0" class="speed-line" style="top: 32px; width: 360px; background: var(--mustard);"></div>
+            <div id="sline-1" class="speed-line" style="top: 76px; width: 520px; background: var(--coral);"></div>
+            <div id="sline-2" class="speed-line" style="top: 120px; width: 290px; background: var(--charcoal);"></div>
+            <div id="sline-3" class="speed-line" style="top: 164px; width: 460px; background: var(--mustard);"></div>
+            <div id="sline-4" class="speed-line" style="top: 208px; width: 390px; background: var(--coral);"></div>
+          </div>
+        </div>
+
+        <!-- State 05: 주문서 -->
+        <div id="layer-s5" class="state-layer">
+          <div class="order-wrap">
+            <div class="order-header">
+              <span class="order-title">주문서</span>
+              <span class="order-id">#AP-0412</span>
+            </div>
+            <div class="order-rows">
+              <div id="orow-0" class="order-row">
+                <div class="order-row-left"><span class="order-dot" style="background:var(--mustard);"></span>기계식 키보드</div>
+                <span class="order-qty">x1</span>
+              </div>
+              <div id="orow-1" class="order-row">
+                <div class="order-row-left"><span class="order-dot" style="background:var(--coral);"></span>원두 에디션</div>
+                <span class="order-qty">x2</span>
+              </div>
+              <div id="orow-2" class="order-row">
+                <div class="order-row-left"><span class="order-dot" style="background:var(--mustard);"></span>무선 헤드셋</div>
+                <span class="order-qty">x1</span>
+              </div>
+              <div id="orow-3" class="order-row">
+                <div class="order-row-left"><span class="order-dot" style="background:var(--coral);"></span>텀블러 세트</div>
+                <span class="order-qty">x1</span>
+              </div>
+            </div>
+            <div class="order-footer">
+              <!-- 심플 바코드 SVG -->
+              <svg width="240" height="44" viewBox="0 0 240 44">
+                <g fill="#2C221E">
+                  <rect x="0" y="0" width="8" height="44"/><rect x="14" y="0" width="4" height="44"/><rect x="24" y="0" width="12" height="44"/><rect x="42" y="0" width="6" height="44"/><rect x="54" y="0" width="4" height="44"/><rect x="64" y="0" width="14" height="44"/><rect x="84" y="0" width="6" height="44"/><rect x="96" y="0" width="10" height="44"/><rect x="112" y="0" width="4" height="44"/><rect x="122" y="0" width="12" height="44"/><rect x="140" y="0" width="6" height="44"/><rect x="152" y="0" width="8" height="44"/><rect x="166" y="0" width="14" height="44"/><rect x="186" y="0" width="4" height="44"/><rect x="196" y="0" width="10" height="44"/><rect x="212" y="0" width="6" height="44"/><rect x="224" y="0" width="12" height="44"/>
+                </g>
+              </svg>
+              <span style="font-family:var(--font-mono); font-size:26px; font-weight:900;">4 ITEMS</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 06: 다양한 종류의 상품 -->
+        <div id="layer-s6" class="state-layer">
+          <div class="items-grid">
+            <!-- 상품 1: 헤드셋 -->
+            <div id="item-card-0" class="item-slot" style="background:#FFF8E7;">
+              <svg width="86" height="86" viewBox="0 0 64 64" fill="none" stroke="#2C221E" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 36v-6a20 20 0 0 1 40 0v6"/>
+                <rect x="8" y="34" width="12" height="18" rx="6" fill="#F2B705"/>
+                <rect x="44" y="34" width="12" height="18" rx="6" fill="#F2B705"/>
+              </svg>
+              <span class="item-label">AUDIO</span>
+            </div>
+            <!-- 상품 2: 키보드/기어 -->
+            <div id="item-card-1" class="item-slot" style="background:#FFF0EE;">
+              <svg width="86" height="86" viewBox="0 0 64 64" fill="none" stroke="#2C221E" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="8" y="18" width="48" height="30" rx="6" fill="#FF6B6B"/>
+                <line x1="16" y1="28" x2="20" y2="28"/><line x1="28" y1="28" x2="36" y2="28"/><line x1="44" y1="28" x2="48" y2="28"/>
+                <line x1="20" y1="38" x2="44" y2="38"/>
+              </svg>
+              <span class="item-label">GEAR</span>
+            </div>
+            <!-- 상품 3: 텀블러/머그 -->
+            <div id="item-card-2" class="item-slot" style="background:#FFF0EE;">
+              <svg width="86" height="86" viewBox="0 0 64 64" fill="none" stroke="#2C221E" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="18" y="12" width="28" height="42" rx="6" fill="#FF6B6B"/>
+                <path d="M14 18h36"/>
+                <rect x="24" y="26" width="16" height="12" fill="#FDFBF7"/>
+              </svg>
+              <span class="item-label">TUMBLER</span>
+            </div>
+            <!-- 상품 4: 기프트 박스 -->
+            <div id="item-card-3" class="item-slot" style="background:#FFF8E7;">
+              <svg width="86" height="86" viewBox="0 0 64 64" fill="none" stroke="#2C221E" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="12" y="22" width="40" height="32" rx="4" fill="#F2B705"/>
+                <rect x="8" y="14" width="48" height="10" rx="3" fill="#FF6B6B"/>
+                <line x1="32" y1="14" x2="32" y2="54"/>
+              </svg>
+              <span class="item-label">PACKAGE</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- State 07: 택배 박스 닫고 테이핑 -->
+        <div id="layer-s7" class="box-pack-layer">
+          <div id="flap-top" class="box-flap-top"></div>
+          <div id="flap-bottom" class="box-flap-bottom"></div>
+          <div id="tape-strip" class="box-tape-h"></div>
+          <div id="box-sticker" class="box-shipping-sticker">
+            <div style="width:65%; height:10px; background:#2C221E; border-radius:4px;"></div>
+            <div style="width:100%; height:8px; background:#FF6B6B; border-radius:4px;"></div>
+            <div style="width:85%; height:8px; background:#2C221E; border-radius:4px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 마우스 커서 레이어 -->
+      <div id="cursor-layer">
+        <svg id="cursor-svg" width="84" height="84" viewBox="0 0 64 64" style="overflow:visible;">
+          <path d="M 10 8 L 52 25 L 33 33 L 43 52 L 33 57 L 23 38 L 12 49 Z" fill="#2C221E" stroke="#FDFBF7" stroke-width="4.5" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- 브라우저 확인용 컨트롤 바 (Playwright 캡처 시 자동 비활성화) -->
+  <div id="preview-ui">
+    <button id="btn-play">PAUSE</button>
+    <button id="btn-step-state" class="secondary">NEXT STATE</button>
+    <input id="time-slider" type="range" min="0" max="12" step="0.0166" value="0" />
+    <span id="time-readout">t = 0.00s | S01</span>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * 순수 시간 함수(Pure Function of Time) 기반 스프링 물리 & 모션 엔진
+     * - 모든 상태는 오직 시간 t (0 <= t <= 12.0) 만으로 즉시 결정됨
+     * ============================================================================
+     */
+    const LOOP_DURATION = 12.0;
+
+    // URL에 ?render=1 이 있으면 프리뷰 UI 숨김 및 자동 루프 정지
+    const params = new URLSearchParams(window.location.search);
+    const isRenderMode = params.get('render') === '1';
+    if (isRenderMode) {
+      document.body.classList.add('render-mode');
+    }
+
+    // 1. 닫힌 형태의 계단 응답 스프링 (Closed-Form Step Response, 0 -> 1)
+    // 미세한 오버슈트만 허용하기 위해 감쇠비(zeta) 기본값을 0.78~0.86 사이로 설계
+    function springStep(dt, omega = 18.0, zeta = 0.80) {
+      if (dt <= 0) return 0;
+      if (zeta < 1.0) {
+        const wd = omega * Math.sqrt(1.0 - zeta * zeta);
+        const env = Math.exp(-zeta * omega * dt);
+        return 1.0 - env * (Math.cos(wd * dt) + (zeta * omega / wd) * Math.sin(wd * dt));
+      } else {
+        const env = Math.exp(-omega * dt);
+        return 1.0 - env * (1.0 + omega * dt);
+      }
+    }
+
+    // 2. 다중 목표값 변화의 순수 스프링 합산 (Sum of Individual Step Responses)
+    function multiSpring(t, keyframes, defaultOmega = 18.0, defaultZeta = 0.82) {
+      let val = keyframes[0].v;
+      for (let i = 1; i < keyframes.length; i++) {
+        const prev = keyframes[i - 1].v;
+        const curr = keyframes[i];
+        const delta = curr.v - prev;
+        const w = curr.w !== undefined ? curr.w : defaultOmega;
+        const z = curr.z !== undefined ? curr.z : defaultZeta;
+        val += delta * springStep(t - curr.t, w, z);
+      }
+      return val;
+    }
+
+    // 유틸리티 함수
+    function clamp01(x) {
+      return Math.max(0, Math.min(1, x));
+    }
+    function smoothstep(a, b, t) {
+      const x = clamp01((t - a) / (b - a));
+      return x * x * (3 - 2 * x);
+    }
+    function lerp(a, b, u) {
+      return a + (b - a) * u;
+    }
+
+    // HEX 컬러 선형 보간
+    function hexToRgb(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function lerpColor(hexA, hexB, u) {
+      const c = clamp01(u);
+      const a = hexToRgb(hexA);
+      const b = hexToRgb(hexB);
+      const r = Math.round(lerp(a[0], b[0], c));
+      const g = Math.round(lerp(a[1], b[1], c));
+      const bl = Math.round(lerp(a[2], b[2], c));
+      return `rgb(${r}, ${g}, ${bl})`;
+    }
+
+    function multiColor(t, keyframes) {
+      let rgb = hexToRgb(keyframes[0].c);
+      for (let i = 1; i < keyframes.length; i++) {
+        const prev = hexToRgb(keyframes[i - 1].c);
+        const curr = hexToRgb(keyframes[i].c);
+        const s = clamp01(springStep(t - keyframes[i].t, keyframes[i].w || 20, 0.9));
+        rgb[0] += (curr[0] - prev[0]) * s;
+        rgb[1] += (curr[1] - prev[1]) * s;
+        rgb[2] += (curr[2] - prev[2]) * s;
+      }
+      return `rgb(${Math.round(clamp01(rgb[0]/255)*255)}, ${Math.round(clamp01(rgb[1]/255)*255)}, ${Math.round(clamp01(rgb[2]/255)*255)})`;
+    }
+
+    // 내부 콘텐츠 독립 등장/퇴장 및 짧은 모션 블러 계산
+    function layerVisibility(t, tEnter, tExit) {
+      const enterP = clamp01((t - tEnter) / 0.16);
+      const exitP = clamp01((t - tExit) / 0.14);
+      const opacity = enterP * (1 - exitP);
+      // 전환 순간에만 짧은 블러 발생
+      const enterBlur = (1 - enterP) * 10;
+      const exitBlur = exitP * 10;
+      const blur = Math.max(enterBlur, exitBlur);
+      const scale = 0.92 + 0.08 * springStep(t - tEnter, 24, 0.82) - 0.06 * exitP;
+      return { opacity, blur, scale };
+    }
+
+    // DOM 참조 캐싱
+    const elCamera = document.getElementById('camera');
+    const elMorph = document.getElementById('morph-shell');
+    const elFloorLine = document.getElementById('floor-line');
+
+    const elS1 = document.getElementById('layer-s1');
+    const elS2 = document.getElementById('layer-s2');
+    const elS3 = document.getElementById('layer-s3');
+    const elS4 = document.getElementById('layer-s4');
+    const elS5 = document.getElementById('layer-s5');
+    const elS6 = document.getElementById('layer-s6');
+    const elS7 = document.getElementById('layer-s7');
+
+    const elLoaderArc = document.getElementById('loader-arc');
+    const elLoaderPct = document.getElementById('loader-pct');
+
+    const elSpeedLines = [
+      document.getElementById('sline-0'),
+      document.getElementById('sline-1'),
+      document.getElementById('sline-2'),
+      document.getElementById('sline-3'),
+      document.getElementById('sline-4'),
+    ];
+
+    const elOrderRows = [
+      document.getElementById('orow-0'),
+      document.getElementById('orow-1'),
+      document.getElementById('orow-2'),
+      document.getElementById('orow-3'),
+    ];
+
+    const elItemCards = [
+      document.getElementById('item-card-0'),
+      document.getElementById('item-card-1'),
+      document.getElementById('item-card-2'),
+      document.getElementById('item-card-3'),
+    ];
+
+    const elFlapTop = document.getElementById('flap-top');
+    const elFlapBottom = document.getElementById('flap-bottom');
+    const elTapeStrip = document.getElementById('tape-strip');
+    const elBoxSticker = document.getElementById('box-sticker');
+
+    const elForkliftGroup = document.getElementById('forklift-group');
+    const elForks = document.getElementById('forklift-forks');
+    const elPalletGroup = document.getElementById('pallet-stack-group');
+    const elPalletBase = document.getElementById('pallet-base');
+    const elDropBoxes = [
+      document.getElementById('drop-box-1'),
+      document.getElementById('drop-box-2'),
+      document.getElementById('drop-box-3'),
+      document.getElementById('drop-box-4'),
+    ];
+
+    const elTruckGroup = document.getElementById('truck-group');
+    const elTruckDeform = document.getElementById('truck-body-deform');
+    const elTruckHeadlight = document.getElementById('truck-headlight');
+    const elExhausts = [
+      document.getElementById('exhaust-1'),
+      document.getElementById('exhaust-2'),
+      document.getElementById('exhaust-3'),
+    ];
+
+    const elLogoGroup = document.getElementById('ap-logo-group');
+    const elLogoCube = document.getElementById('ap-logo-cube');
+    const elLogoText = document.getElementById('ap-logo-text');
+
+    const elCursor = document.getElementById('cursor-layer');
+    const elCursorSvg = document.getElementById('cursor-svg');
+
+    /**
+     * ============================================================================
+     * 핵심 seek(t) 함수 — 0.0s ~ 12.0s 완벽한 루프 보장
+     * ============================================================================
+     */
+    window.seek = function(rawT) {
+      // t = 12.0 일 때 t = 0.0 과 완벽히 동일한 상태를 보장
+      let t = rawT % LOOP_DURATION;
+      if (t < 0) t += LOOP_DURATION;
+
+      // ------------------------------------------------------------------------
+      // 1. 카메라 Zoom & Pan (각 상태가 화면을 꽉 채우도록 줌인/줌아웃)
+      // ------------------------------------------------------------------------
+      const camScale = multiSpring(t, [
+        { t: 0.0,  v: 1.38 }, // S01: 주문버튼 집중
+        { t: 1.0,  v: 1.55 }, // S02: 로더 확대
+        { t: 1.8,  v: 1.28 }, // S03: 발송시작 배너
+        { t: 2.5,  v: 1.15 }, // S04: 스피드라인 와이드
+        { t: 3.2,  v: 1.20 }, // S05: 주문서
+        { t: 4.2,  v: 1.25 }, // S06: 상품 그리드
+        { t: 5.2,  v: 1.32 }, // S07: 택배 포장 집중
+        { t: 6.4,  v: 1.04 }, // S08: 파렛트 적재 줌아웃
+        { t: 7.6,  v: 0.96 }, // S09: 지게차 진입 와이드
+        { t: 8.8,  v: 1.08 }, // S10: 트럭 모핑
+        { t: 9.6,  v: 1.14 }, // S11: 트럭 시동 클로즈업
+        { t: 10.3, v: 1.02 }, // S12: 트럭 출발
+        { t: 11.0, v: 1.18 }, // S13: AP CENTER 로고
+        { t: 11.6, v: 1.38, w: 28, z: 0.92 } // S01 복귀 (루프 일치)
+      ], 16, 0.84);
+
+      const camY = multiSpring(t, [
+        { t: 0.0,  v: 0 },
+        { t: 6.4,  v: -30 },
+        { t: 8.8,  v: -15 },
+        { t: 11.0, v: 0 },
+        { t: 11.6, v: 0, w: 28, z: 0.92 }
+      ], 16, 0.85);
+
+      elCamera.style.transform = `translate3d(0px, ${camY.toFixed(2)}px, 0) scale(${camScale.toFixed(4)})`;
+
+      // ------------------------------------------------------------------------
+      // 2. 메인 모핑 컨테이너 (Morph Shell: States 01 ~ 07 & Loop Return)
+      // ------------------------------------------------------------------------
+      // S03(발송시작)에서 앞뒤 끝 시간차 스프링으로 쫀득한 가로 확장 구현
+      const shellW = multiSpring(t, [
+        { t: 0.0,  v: 520 }, // S01: 주문버튼
+        { t: 0.52, v: 475, w: 28, z: 0.75 }, // 클릭 시 압축
+        { t: 0.68, v: 535, w: 24, z: 0.78 }, // 탄성 복원
+        { t: 1.0,  v: 260 }, // S02: 정사각형 로더
+        { t: 1.8,  v: 680, w: 22, z: 0.76 }, // S03: 발송시작 배너
+        { t: 2.5,  v: 980, w: 20, z: 0.82 }, // S04: 스피드라인 트랙
+        { t: 3.2,  v: 560 }, // S05: 주문서
+        { t: 4.2,  v: 620 }, // S06: 상품 그리드
+        { t: 5.2,  v: 500 }, // S07: 택배 상자
+        { t: 11.55, v: 520, w: 30, z: 0.95 } // 루프 복귀
+      ], 18, 0.82);
+
+      const shellH = multiSpring(t, [
+        { t: 0.0,  v: 156 },
+        { t: 0.52, v: 142, w: 28, z: 0.75 },
+        { t: 0.68, v: 160, w: 24, z: 0.78 },
+        { t: 1.0,  v: 260 },
+        { t: 1.8,  v: 164 },
+        { t: 2.5,  v: 260 },
+        { t: 3.2,  v: 680 },
+        { t: 4.2,  v: 620 },
+        { t: 5.2,  v: 500 },
+        { t: 11.55, v: 156, w: 30, z: 0.95 }
+      ], 18, 0.82);
+
+      const shellRadius = multiSpring(t, [
+        { t: 0.0,  v: 78 },
+        { t: 1.0,  v: 56 },
+        { t: 1.8,  v: 82 },
+        { t: 2.5,  v: 40 },
+        { t: 3.2,  v: 36 },
+        { t: 4.2,  v: 44 },
+        { t: 5.2,  v: 28 },
+        { t: 11.55, v: 78, w: 30, z: 0.95 }
+      ], 18, 0.84);
+
+      // S01 드래그 오프셋 + S08 화면 위 탈출 + S13 복귀
+      const dragOffsetX = (
+        28 * springStep(t - 0.25, 22, 0.85)
+        - 28 * springStep(t - 0.55, 26, 0.80)
+      );
+      const dragOffsetY = (
+        16 * springStep(t - 0.25, 22, 0.85)
+        - 16 * springStep(t - 0.55, 26, 0.80)
+      );
+
+      // 6.25s에 박스가 아래로 살짝 움츠렸다가 6.42s에 화면 밖 위로 솟구쳐 퇴장
+      const boxLaunchY = (
+        45 * springStep(t - 6.18, 24, 0.85)
+        - 1250 * springStep(t - 6.38, 16, 0.88)
+        + 1205 * springStep(t - 11.52, 24, 0.92)
+      );
+
+      // State 08 ~ 13 초반 동안에는 메인 쉘 숨김 (스테이지 오브젝트가 주인공)
+      const shellOpacity = (
+        1.0
+        - smoothstep(6.55, 6.70, t)
+        + smoothstep(11.55, 11.72, t)
+      );
+
+      const shellBg = multiColor(t, [
+        { t: 0.0,  c: '#F2B705' }, // S01: 머스타드 버튼
+        { t: 1.0,  c: '#FDFBF7' }, // S02: 크림화이트 로더
+        { t: 1.8,  c: '#2C221E' }, // S03: 차콜 배너
+        { t: 2.5,  c: '#FDFBF7' }, // S04: 트랙 배경
+        { t: 3.2,  c: '#FDFBF7' }, // S05: 주문서
+        { t: 4.2,  c: '#FDFBF7' }, // S06: 상품 그리드
+        { t: 5.2,  c: '#F2B705' }, // S07: 택배 상자
+        { t: 11.55, c: '#F2B705' } // 루프 복귀
+      ]);
+
+      elMorph.style.width = `${shellW.toFixed(2)}px`;
+      elMorph.style.height = `${shellH.toFixed(2)}px`;
+      elMorph.style.borderRadius = `${shellRadius.toFixed(2)}px`;
+      elMorph.style.borderWidth = `8px`;
+      elMorph.style.backgroundColor = shellBg;
+      elMorph.style.opacity = shellOpacity.toFixed(3);
+      elMorph.style.transform = `translate3d(${(-shellW / 2 + dragOffsetX).toFixed(2)}px, ${(-shellH / 2 + dragOffsetY + boxLaunchY).toFixed(2)}px, 0)`;
+
+      // ------------------------------------------------------------------------
+      // 3. 각 State 내부 콘텐츠 독립 등장/퇴장 및 애니메이션
+      // ------------------------------------------------------------------------
+
+      // [State 01] 주문버튼 (0.0s ~ 0.98s & 11.65s ~ 12.0s 루프 연결)
+      const s1Exit = clamp01((t - 0.92) / 0.14);
+      const s1Return = clamp01((t - 11.64) / 0.18);
+      const s1Op = Math.max(1 - s1Exit, s1Return);
+      const s1Blur = (1 - s1Op) * 8;
+      elS1.style.opacity = s1Op.toFixed(3);
+      elS1.style.filter = s1Blur > 0.2 ? `blur(${s1Blur.toFixed(2)}px)` : 'none';
+
+      // [State 02] 로더 (1.02s ~ 1.76s)
+      const v2 = layerVisibility(t, 1.02, 1.74);
+      elS2.style.opacity = v2.opacity.toFixed(3);
+      elS2.style.filter = v2.blur > 0.2 ? `blur(${v2.blur.toFixed(2)}px)` : 'none';
+      elS2.style.transform = `scale(${v2.scale.toFixed(3)})`;
+      if (v2.opacity > 0.01) {
+        const prog = clamp01(springStep(t - 1.06, 8.5, 0.92));
+        const dashOffset = 289 * (1 - prog);
+        elLoaderArc.setAttribute('stroke-dashoffset', dashOffset.toFixed(2));
+        elLoaderPct.textContent = `${Math.round(prog * 100)}%`;
+      }
+
+      // [State 03] 발송시작 (1.82s ~ 2.46s)
+      const v3 = layerVisibility(t, 1.82, 2.44);
+      elS3.style.opacity = v3.opacity.toFixed(3);
+      elS3.style.filter = v3.blur > 0.2 ? `blur(${v3.blur.toFixed(2)}px)` : 'none';
+      elS3.style.transform = `scale(${v3.scale.toFixed(3)})`;
+
+      // [State 04] 스피드라인 5개 (2.50s ~ 3.16s) — 정렬되지 않은 위상차 질주
+      const v4 = layerVisibility(t, 2.50, 3.14);
+      elS4.style.opacity = v4.opacity.toFixed(3);
+      if (v4.opacity > 0.01) {
+        const speeds = [2200, 2750, 1950, 2550, 2350];
+        const offsets = [-420, -680, -310, -590, -490];
+        const delays = [0.0, 0.06, 0.02, 0.09, 0.04];
+        for (let i = 0; i < 5; i++) {
+          const dt = Math.max(0, t - (2.46 + delays[i]));
+          // 앞쪽 끝과 뒤쪽 끝이 다른 스프링으로 늘어나는 속도감
+          const frontX = offsets[i] + dt * speeds[i];
+          const stretch = 1 + 0.45 * Math.sin(clamp01(dt / 0.6) * Math.PI);
+          elSpeedLines[i].style.transform = `translate3d(${frontX.toFixed(1)}px, 0, 0) scaleX(${stretch.toFixed(2)})`;
+        }
+      }
+
+      // [State 05] 주문서 (3.22s ~ 4.16s)
+      const v5 = layerVisibility(t, 3.22, 4.14);
+      elS5.style.opacity = v5.opacity.toFixed(3);
+      elS5.style.filter = v5.blur > 0.2 ? `blur(${v5.blur.toFixed(2)}px)` : 'none';
+      if (v5.opacity > 0.01) {
+        for (let i = 0; i < 4; i++) {
+          const rowS = springStep(t - (3.28 + i * 0.09), 24, 0.80);
+          const rowY = (1 - rowS) * 45;
+          elOrderRows[i].style.transform = `translate3d(0, ${rowY.toFixed(2)}px, 0) scale(${(0.85 + 0.15 * rowS).toFixed(3)})`;
+          elOrderRows[i].style.opacity = clamp01(rowS * 1.5).toFixed(3);
+        }
+      }
+
+      // [State 06] 다양한 종류의 상품 (4.22s ~ 5.26s)
+      const v6 = layerVisibility(t, 4.22, 5.24);
+      elS6.style.opacity = v6.opacity.toFixed(3);
+      elS6.style.filter = v6.blur > 0.2 ? `blur(${v6.blur.toFixed(2)}px)` : 'none';
+      if (v6.opacity > 0.01) {
+        // 5.15s부터 박스 중앙으로 모이며 포장 준비
+        const packGather = springStep(t - 5.10, 22, 0.85);
+        const dirs = [
+          [70, 70],
+          [-70, 70],
+          [70, -70],
+          [-70, -70]
+        ];
+        for (let i = 0; i < 4; i++) {
+          const itemS = springStep(t - (4.26 + i * 0.07), 24, 0.76);
+          const gx = dirs[i][0] * packGather;
+          const gy = dirs[i][1] * packGather;
+          const sc = itemS * (1 - 0.25 * packGather);
+          elItemCards[i].style.transform = `translate3d(${gx.toFixed(1)}px, ${gy.toFixed(1)}px, 0) scale(${sc.toFixed(3)})`;
+        }
+      }
+
+      // [State 07] 택배 박스 닫고 테이핑 (5.20s ~ 6.60s)
+      const s7Op = smoothstep(5.18, 5.28, t) * (1 - smoothstep(6.55, 6.68, t));
+      elS7.style.opacity = s7Op.toFixed(3);
+      if (s7Op > 0.01) {
+        const flapP = clamp01(springStep(t - 5.24, 20, 0.84));
+        elFlapTop.style.transform = `scaleY(${flapP.toFixed(3)})`;
+        elFlapBottom.style.transform = `scaleY(${flapP.toFixed(3)})`;
+
+        // 테이프: 앞쪽 끝이 먼저 쭉 그어지는 스프링
+        const tapeP = clamp01(springStep(t - 5.56, 22, 0.82));
+        elTapeStrip.style.width = `${(tapeP * 100).toFixed(2)}%`;
+
+        const stickerS = springStep(t - 5.82, 26, 0.76);
+        elBoxSticker.style.transform = `scale(${stickerS.toFixed(3)})`;
+      }
+
+      // ------------------------------------------------------------------------
+      // 4. 다중 오브젝트 물리 스테이지 (States 08 ~ 13)
+      // ------------------------------------------------------------------------
+
+      // 바닥 기준선 (6.4s 등장 ~ 11.1s 퇴장)
+      const floorP = clamp01(springStep(t - 6.40, 20, 0.85)) * (1 - smoothstep(10.95, 11.15, t));
+      elFloorLine.style.transform = `scaleX(${floorP.toFixed(3)})`;
+      elFloorLine.style.opacity = floorP.toFixed(3);
+
+      // [State 08 & 09] 파렛트 적재 (6.4s ~ 7.6s) & 지게차 리프팅 (7.6s ~ 8.8s)
+      const scene89Op = smoothstep(6.38, 6.50, t) * (1 - smoothstep(8.78, 8.92, t));
+      elPalletGroup.style.opacity = scene89Op.toFixed(3);
+      elForkliftGroup.style.opacity = scene89Op.toFixed(3);
+
+      if (scene89Op > 0.01) {
+        // 파렛트 등장
+        const palS = springStep(t - 6.42, 22, 0.80);
+        elPalletBase.style.transform = `translate3d(0, ${((1 - palS) * 120).toFixed(1)}px, 0)`;
+
+        // 4개의 상자가 위에서 시차를 두고 낙하 + 급정거 시 Squash & Stretch (앞뒤 끝 다른 스프링)
+        const dropTimes = [6.56, 6.72, 6.88, 7.04];
+        for (let i = 0; i < 4; i++) {
+          const dt = t - dropTimes[i];
+          // 상자 하단(leading edge)과 상단(trailing edge)의 스프링 속도 차이를 이용해 착지 시 찌그러짐 구현
+          const leadFall = springStep(dt, 20, 0.84);
+          const trailFall = springStep(dt - 0.035, 16, 0.74);
+          const yPos = -780 * (1 - leadFall);
+          // 착지 순간 leadFall > trailFall 이므로 세로가 압축(squash)되고 가로가 늘어남(stretch)
+          const compression = clamp01(leadFall - trailFall) * 0.28;
+          const scaleY = 1 - compression;
+          const scaleX = 1 + compression * 0.65;
+
+          elDropBoxes[i].style.opacity = (dt > 0 ? 1 : 0).toString();
+          elDropBoxes[i].style.transform = `translate3d(0, ${yPos.toFixed(1)}px, 0) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)})`;
+          elDropBoxes[i].style.transformOrigin = `center 150px`;
+        }
+
+        // State 09: 왼쪽에서 지게차 진입 + 급정거 Squash & Stretch
+        const fkDt = t - 7.55;
+        const fkFront = springStep(fkDt, 16, 0.82); // 앞코 스프링
+        const fkRear = springStep(fkDt - 0.045, 13, 0.75); // 뒤끝 스프링
+        const fkX = -820 * (1 - fkFront);
+        const fkStretchX = 1 + (fkFront - fkRear) * 0.22;
+        const fkStretchY = 1 / Math.sqrt(Math.max(0.7, fkStretchX));
+
+        // 8.12s: 포크로 파렛트 들어 올리기 + 8.75s: 트럭으로 모핑을 위한 중앙 응집
+        const liftS = springStep(t - 8.12, 18, 0.80);
+        const morphShrink = smoothstep(8.72, 8.90, t);
+        const liftY = -115 * liftS;
+
+        elForks.style.transform = `translate3d(0, ${liftY.toFixed(1)}px, 0)`;
+        elForkliftGroup.style.transform = `translate3d(${fkX.toFixed(1)}px, 0, 0) scale(${(fkStretchX * (1 - 0.15 * morphShrink)).toFixed(3)}, ${(fkStretchY * (1 - 0.15 * morphShrink)).toFixed(3)})`;
+        elPalletGroup.style.transform = `translate3d(0, ${liftY.toFixed(1)}px, 0) scale(${(1 - 0.15 * morphShrink).toFixed(3)})`;
+      }
+
+      // [State 10, 11, 12] 트럭으로 모핑 (8.8s) → 시동걸기 (9.6s) → 오른쪽 탈출 (10.3s)
+      const truckOp = smoothstep(8.76, 8.90, t) * (1 - smoothstep(10.98, 11.12, t));
+      elTruckGroup.style.opacity = truckOp.toFixed(3);
+
+      if (truckOp > 0.01) {
+        // 8.80s 모핑 등장 탄성
+        const morphIn = springStep(t - 8.80, 22, 0.78);
+
+        // 9.55s ~ 10.30s 시동걸기 (고주파 엔진 아이들링 진동)
+        const revEnv = smoothstep(9.50, 9.65, t) * (1 - smoothstep(10.25, 10.38, t));
+        const engineRumbleY = revEnv * Math.sin(t * 95) * 6.5;
+        const engineRumbleRot = revEnv * Math.cos(t * 75) * 0.9;
+
+        // 헤드라이트 점등
+        elTruckHeadlight.style.opacity = smoothstep(9.60, 9.75, t).toFixed(3);
+
+        // 배기구 연기 3방울 퐁퐁
+        for (let i = 0; i < 3; i++) {
+          const pTime = (t - (9.58 + i * 0.16));
+          const pProg = clamp01(pTime / 0.55);
+          const pScale = springStep(pTime, 24, 0.75) * (1 - pProg * 0.5);
+          const px = -pProg * (65 + i * 25);
+          const py = -pProg * (35 + i * 15);
+          const pOp = (pTime > 0 ? 1 : 0) * (1 - pProg);
+          elExhausts[i].style.opacity = pOp.toFixed(3);
+          elExhausts[i].style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) scale(${pScale.toFixed(3)})`;
+        }
+
+        // 10.30s 트럭 오른쪽 출발!
+        // <build> 3번 규칙: 앞쪽 끝(Front)이 먼저 쭉 늘어나고 뒤쪽 끝(Rear)이 따라오게 설계
+        const launchDt = t - 10.28;
+        const frontMove = 1650 * springStep(launchDt, 11.5, 0.86);
+        const rearMove  = 1650 * springStep(launchDt - 0.065, 10.0, 0.82);
+
+        const truckCenterX = (frontMove + rearMove) * 0.5;
+        const stretchAmount = clamp01((frontMove - rearMove) / 420);
+        const truckScaleX = (0.75 + 0.25 * morphIn) * (1 + stretchAmount * 0.38);
+        const truckScaleY = (0.75 + 0.25 * morphIn) * (1 - stretchAmount * 0.16);
+
+        elTruckDeform.style.transform = `translate3d(${truckCenterX.toFixed(1)}px, ${engineRumbleY.toFixed(1)}px, 0) rotate(${engineRumbleRot.toFixed(2)}deg) scale(${truckScaleX.toFixed(3)}, ${truckScaleY.toFixed(3)})`;
+      }
+
+      // [State 13] AP CENTER 로고 등장 (11.00s ~ 11.65s) → 다시 주문버튼으로 모핑
+      const logoEnter = springStep(t - 10.98, 22, 0.80);
+      const logoExit = smoothstep(11.52, 11.68, t);
+      const logoOp = clamp01(logoEnter * 1.4) * (1 - logoExit);
+
+      elLogoGroup.style.opacity = logoOp.toFixed(3);
+      if (logoOp > 0.01) {
+        const logoScale = (0.80 + 0.20 * logoEnter) * (1 - 0.35 * logoExit);
+        elLogoGroup.style.transform = `scale(${logoScale.toFixed(3)})`;
+
+        // 큐브 심볼과 텍스트의 미세한 위상차 스프링
+        const cubeY = (1 - springStep(t - 10.98, 24, 0.76)) * 60;
+        const textX = (1 - springStep(t - 11.05, 22, 0.80)) * 50;
+        elLogoCube.style.transform = `translate(-395px, ${cubeY.toFixed(1)}px)`;
+        elLogoText.setAttribute('transform', `translate(${textX.toFixed(1)}, 0)`);
+      }
+
+      // ------------------------------------------------------------------------
+      // 5. 마우스 커서 (t=0.0s 와 t=12.0s 의 위치 및 속도 완벽 일치)
+      // ------------------------------------------------------------------------
+      // 시작점이자 끝점: (340, 260)에서 정지 상태로 출발/도착
+      const cursorX = multiSpring(t, [
+        { t: 0.0,   v: 340 },
+        { t: 0.06,  v: 40,  w: 20, z: 0.85 }, // 버튼 위로 진입
+        { t: 0.25,  v: 68,  w: 22, z: 0.85 }, // 살짝 드래그
+        { t: 0.55,  v: 20,  w: 26, z: 0.82 }, // 클릭 지점
+        { t: 0.90,  v: 520, w: 16, z: 0.88 }, // 외곽으로 퇴장
+        { t: 11.45, v: 340, w: 28, z: 0.95 }  // t=12.0s 전에 정확히 (340, 260) 복귀 완료
+      ]);
+
+      const cursorY = multiSpring(t, [
+        { t: 0.0,   v: 260 },
+        { t: 0.06,  v: 35,  w: 20, z: 0.85 },
+        { t: 0.25,  v: 51,  w: 22, z: 0.85 },
+        { t: 0.55,  v: 18,  w: 26, z: 0.82 },
+        { t: 0.90,  v: 420, w: 16, z: 0.88 },
+        { t: 11.45, v: 260, w: 28, z: 0.95 }
+      ]);
+
+      const cursorClickScale = (
+        1.0
+        - 0.22 * springStep(t - 0.50, 32, 0.80)
+        + 0.22 * springStep(t - 0.66, 28, 0.78)
+      );
+
+      const cursorOp = (
+        1.0
+        - smoothstep(0.95, 1.15, t)
+        + smoothstep(11.45, 11.68, t)
+      );
+
+      elCursor.style.opacity = cursorOp.toFixed(3);
+      elCursor.style.transform = `translate3d(${cursorX.toFixed(2)}px, ${cursorY.toFixed(2)}px, 0) scale(${cursorClickScale.toFixed(3)})`;
+
+      // 프리뷰 UI 업데이트
+      if (!isRenderMode) {
+        updatePreviewUI(t);
+      }
+    };
+
+    // --------------------------------------------------------------------------
+    // 브라우저 프리뷰용 컨트롤러 (Playwright 캡처 시에는 실행되지 않음)
+    // --------------------------------------------------------------------------
+    const stateCheckpoints = [
+      { t: 0.0,  name: 'S01 주문버튼' },
+      { t: 1.0,  name: 'S02 로더' },
+      { t: 1.8,  name: 'S03 발송시작' },
+      { t: 2.5,  name: 'S04 스피드라인' },
+      { t: 3.2,  name: 'S05 주문서' },
+      { t: 4.2,  name: 'S06 상품그리드' },
+      { t: 5.2,  name: 'S07 박스포장' },
+      { t: 6.4,  name: 'S08 파렛트적재' },
+      { t: 7.6,  name: 'S09 지게차리프팅' },
+      { t: 8.8,  name: 'S10 트럭모핑' },
+      { t: 9.6,  name: 'S11 시동걸기' },
+      { t: 10.3, name: 'S12 트럭출발' },
+      { t: 11.1, name: 'S13 AP CENTER 로고' }
+    ];
+
+    const slider = document.getElementById('time-slider');
+    const readout = document.getElementById('time-readout');
+    const btnPlay = document.getElementById('btn-play');
+    const btnStep = document.getElementById('btn-step-state');
+
+    let isPlaying = !isRenderMode;
+    let currentT = 0;
+    let lastTimestamp = null;
+
+    function updatePreviewUI(t) {
+      slider.value = t.toFixed(3);
+      let activeState = stateCheckpoints[0].name;
+      for (let i = stateCheckpoints.length - 1; i >= 0; i--) {
+        if (t >= stateCheckpoints[i].t) {
+          activeState = stateCheckpoints[i].name;
+          break;
+        }
+      }
+      readout.textContent = `t = ${t.toFixed(2)}s | ${activeState}`;
+    }
+
+    slider.addEventListener('input', (e) => {
+      isPlaying = false;
+      btnPlay.textContent = 'PLAY';
+      currentT = parseFloat(e.target.value);
+      window.seek(currentT);
+    });
+
+    btnPlay.addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      btnPlay.textContent = isPlaying ? 'PAUSE' : 'PLAY';
+      if (isPlaying) lastTimestamp = null;
+    });
+
+    btnStep.addEventListener('click', () => {
+      isPlaying = false;
+      btnPlay.textContent = 'PLAY';
+      const next = stateCheckpoints.find(s => s.t > currentT + 0.05) || stateCheckpoints[0];
+      currentT = next.t + 0.35; // 각 State가 완전히 펼쳐진 시점으로 이동
+      window.seek(currentT);
+    });
+
+    function rafLoop(timestamp) {
+      if (isPlaying) {
+        if (lastTimestamp === null) lastTimestamp = timestamp;
+        const dt = (timestamp - lastTimestamp) / 1000;
+        lastTimestamp = timestamp;
+        currentT = (currentT + dt) % LOOP_DURATION;
+        window.seek(currentT);
+      }
+      requestAnimationFrame(rafLoop);
+    }
+
+    // 초기 실행 (웹폰트 로드 완료 후 첫 프레임 렌더링)
+    document.fonts.ready.then(() => {
+      window.seek(0);
+      if (!isRenderMode) {
+        requestAnimationFrame(rafLoop);
+      }
+    });
+  </script>
+</body>
+</html>
