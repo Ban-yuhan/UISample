@@ -1,6 +1,7 @@
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
@@ -17,33 +18,77 @@ namespace LogisticsTycoon.UI.Editor
         private const string ExhaustSmokePuffPrefabPath = PrefabDir + "/ExhaustSmokePuff.prefab";
         private const string LaserScanBeamPrefabPath = PrefabDir + "/LaserScanBeam.prefab";
         private const string SpritesDir = "Assets/Prefabs/UI/Sprites";
+        private const string FontPath = "Assets/Fonts/MALGUN SDF.asset";
+        private const string FloatingOutlineMatPath = "Assets/Fonts/MALGUN SDF - FloatingOutline.mat";
 
-        private static Font GetDefaultFont()
+        private static TMP_FontAsset _font;
+
+        private static TMP_FontAsset GetDefaultFont()
         {
-            Font font = null;
-            try
+            if (_font == null)
             {
-                font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            }
-            catch { }
-
-            if (font == null)
-            {
-                try
+                _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
+                if (_font == null)
                 {
-                    font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+                    Debug.LogWarning($"[ButtonSceneBuilder] TMP_FontAsset을 찾을 수 없습니다: {FontPath}. TMP 기본 폰트를 사용합니다.");
+                    _font = TMP_Settings.defaultFontAsset;
                 }
-                catch { }
             }
+            return _font;
+        }
 
-            if (font == null)
+        /// <summary>
+        /// 플로팅 텍스트용 외곽선 머티리얼 프리셋 (딥 차콜 브라운 볼드 외곽선)
+        /// </summary>
+        private static Material GetOrCreateFloatingOutlineMaterial(TMP_FontAsset font)
+        {
+            if (font == null || font.material == null) return null;
+
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(FloatingOutlineMatPath);
+            if (mat == null)
             {
-                var fonts = Resources.FindObjectsOfTypeAll<Font>();
-                if (fonts != null && fonts.Length > 0)
-                    font = fonts[0];
+                mat = new Material(font.material);
+                AssetDatabase.CreateAsset(mat, FloatingOutlineMatPath);
+            }
+            else
+            {
+                mat.shader = font.material.shader;
+                mat.CopyPropertiesFromMaterial(font.material);
             }
 
-            return font;
+            mat.name = Path.GetFileNameWithoutExtension(FloatingOutlineMatPath);
+            mat.EnableKeyword(ShaderUtilities.Keyword_Outline);
+            mat.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0.22f, 0.18f, 0.15f, 0.95f));
+            mat.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.25f);
+            mat.SetFloat(ShaderUtilities.ID_FaceDilate, 0.1f);
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        private static TextMeshProUGUI AddTmp(
+            GameObject go,
+            string text,
+            float fontSize,
+            FontStyles style,
+            TextAlignmentOptions align,
+            Color color,
+            Material sharedMaterial = null)
+        {
+            TMP_FontAsset font = GetDefaultFont();
+            TextMeshProUGUI tmp = go.AddComponent<TextMeshProUGUI>();
+            tmp.font = font;
+            Material mat = sharedMaterial != null ? sharedMaterial : (font != null ? font.material : null);
+            if (mat != null) tmp.fontSharedMaterial = mat;
+            tmp.text = text;
+            tmp.fontSize = fontSize;
+            tmp.fontStyle = style;
+            tmp.alignment = align;
+            tmp.color = color;
+            tmp.richText = true;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode = TextOverflowModes.Overflow;
+            tmp.raycastTarget = false;
+            return tmp;
         }
 
         [MenuItem("Tools/UI Showcase/Setup ButtonScene")]
@@ -97,7 +142,7 @@ namespace LogisticsTycoon.UI.Editor
             SetStretch(fxContainerRect);
 
             // Header / Title Panel (딥 네이비 슬레이트 카드 + 웜 골드/아이보리 텍스트)
-            Text currentModeText = CreateHeader(canvasRect, roundedBoxSprite);
+            TMP_Text currentModeText = CreateHeader(canvasRect, roundedBoxSprite);
 
             // Center Panel (밀크 화이트 카드 + 머스타드 옐로우 배송 버튼 & 서브 버튼 3종)
             CreateCenterShowcase(
@@ -118,7 +163,7 @@ namespace LogisticsTycoon.UI.Editor
                 canvasRect,
                 roundedBoxSprite,
                 out Button btnOrderRush,
-                out Text txtOrderRush,
+                out TMP_Text txtOrderRush,
                 out Image imgOrderRush,
                 out Button btnJelly,
                 out Button btnDepth,
@@ -131,11 +176,11 @@ namespace LogisticsTycoon.UI.Editor
                 out Button btnTruckRev,
                 out Button btnTape,
                 out Button btnTogRipple,
-                out Text txtTogRipple,
+                out TMP_Text txtTogRipple,
                 out Button btnTogFloat,
-                out Text txtTogFloat,
+                out TMP_Text txtTogFloat,
                 out Button btnTogSparkle,
-                out Text txtTogSparkle,
+                out TMP_Text txtTogSparkle,
                 out Button btnReset);
 
             // 4. Order Rush Fever Overlay 생성 (FX_Container 바로 아래, 전체 화면 스트레칭)
@@ -383,25 +428,16 @@ namespace LogisticsTycoon.UI.Editor
 
         private static GameObject CreateOrUpdateFloatingTextPrefab()
         {
-            GameObject go = new GameObject("FloatingText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text), typeof(Outline), typeof(FloatingText));
+            GameObject go = new GameObject("FloatingText", typeof(RectTransform));
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(340f, 70f);
             rt.pivot = new Vector2(0.5f, 0.5f);
 
-            Font font = GetDefaultFont();
-
-            Text txt = go.GetComponent<Text>();
-            txt.font = font;
-            txt.fontSize = 34;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = new Color(1.0f, 0.85f, 0.25f, 1f); // 탐스러운 따뜻한 꿀벌 옐로우
-            txt.text = "+100 EXP";
-            txt.raycastTarget = false;
-
-            Outline outline = go.GetComponent<Outline>();
-            outline.effectColor = new Color(0.22f, 0.18f, 0.15f, 0.95f); // 딥 차콜 브라운 볼드 외곽선
-            outline.effectDistance = new Vector2(2.5f, -2.5f);
+            // 탐스러운 따뜻한 꿀벌 옐로우 + 딥 차콜 브라운 볼드 외곽선(머티리얼 프리셋)
+            Material outlineMat = GetOrCreateFloatingOutlineMaterial(GetDefaultFont());
+            AddTmp(go, "+100 EXP", 34f, FontStyles.Bold, TextAlignmentOptions.Center,
+                new Color(1.0f, 0.85f, 0.25f, 1f), outlineMat);
+            go.AddComponent<FloatingText>();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, FloatingTextPrefabPath);
             Object.DestroyImmediate(go);
@@ -462,6 +498,10 @@ namespace LogisticsTycoon.UI.Editor
                 if (root.GetComponent<Camera>() != null || root.GetComponent<Light>() != null)
                 {
                     continue; // 카메라 및 기본 라이트는 유지
+                }
+                if (root.name == "BackToMainCanvas")
+                {
+                    continue; // MainHubAndBackBuilder가 주입한 '메인으로' 버튼 유지
                 }
                 Object.DestroyImmediate(root);
             }
@@ -526,7 +566,7 @@ namespace LogisticsTycoon.UI.Editor
             img.raycastTarget = false;
         }
 
-        private static Text CreateHeader(RectTransform canvasRect, Sprite roundedSprite)
+        private static TMP_Text CreateHeader(RectTransform canvasRect, Sprite roundedSprite)
         {
             GameObject headerObj = CreateUIElement("HeaderPanel", canvasRect);
             RectTransform rt = headerObj.GetComponent<RectTransform>();
@@ -553,22 +593,14 @@ namespace LogisticsTycoon.UI.Editor
             headerImg.type = Image.Type.Sliced;
             headerImg.color = new Color(0.18f, 0.23f, 0.32f, 0.95f);
 
-            Font arialFont = GetDefaultFont();
-
             // Title
             GameObject titleObj = CreateUIElement("TitleText", rt);
             RectTransform titleRt = titleObj.GetComponent<RectTransform>();
             titleRt.anchorMin = new Vector2(0f, 0.46f);
             titleRt.anchorMax = new Vector2(1f, 0.96f);
             titleRt.sizeDelta = Vector2.zero;
-            Text titleTxt = titleObj.AddComponent<Text>();
-            titleTxt.font = arialFont;
-            titleTxt.fontSize = 26;
-            titleTxt.fontStyle = FontStyle.Bold;
-            titleTxt.alignment = TextAnchor.MiddleCenter;
-            titleTxt.color = new Color(1.0f, 0.96f, 0.90f, 1f); // #FFF6E5 웜 골드/아이보리
-            titleTxt.text = "🚚 LOGISTICS TYCOON - BUTTON INTERACTION SHOWCASE";
-            titleTxt.raycastTarget = false;
+            AddTmp(titleObj, "LOGISTICS TYCOON - BUTTON INTERACTION SHOWCASE", 26f, FontStyles.Bold,
+                TextAlignmentOptions.Center, new Color(1.0f, 0.96f, 0.90f, 1f)); // #FFF6E5 웜 골드/아이보리
 
             // Status Text
             GameObject statusObj = CreateUIElement("StatusText", rt);
@@ -576,16 +608,10 @@ namespace LogisticsTycoon.UI.Editor
             statusRt.anchorMin = new Vector2(0f, 0.06f);
             statusRt.anchorMax = new Vector2(1f, 0.48f);
             statusRt.sizeDelta = Vector2.zero;
-            Text statusTxt = statusObj.AddComponent<Text>();
-            statusTxt.font = arialFont;
-            statusTxt.fontSize = 17;
-            statusTxt.alignment = TextAnchor.MiddleCenter;
-            statusTxt.color = new Color(0.95f, 0.88f, 0.76f, 1f); // 소프트 웜 크림
-            statusTxt.supportRichText = true;
-            statusTxt.text = "[선택 모드]: <b>1. 젤리 스쿼시 (Jelly Squash)</b> | [활성 FX]: 물결 리플 ON | 플로팅 텍스트 ON";
-            statusTxt.raycastTarget = false;
-
-            return statusTxt;
+            return AddTmp(statusObj,
+                "[선택 모드]: <b>1. 젤리 스쿼시 (Jelly Squash)</b> | [활성 FX]: 물결 리플 ON | 플로팅 텍스트 ON",
+                17f, FontStyles.Normal, TextAlignmentOptions.Center,
+                new Color(0.95f, 0.88f, 0.76f, 1f)); // 소프트 웜 크림
         }
 
         private static void CreateCenterShowcase(
@@ -601,8 +627,6 @@ namespace LogisticsTycoon.UI.Editor
             out UIButtonFeedback mainFeedback,
             out UIButtonFeedback[] subFeedbacks)
         {
-            Font arialFont = GetDefaultFont();
-
             // Center Panel (화면 좌측~중앙 차지 밀크 화이트 카드)
             GameObject centerPanel = CreateUIElement("CenterShowcasePanel", canvasRect);
             RectTransform centerRt = centerPanel.GetComponent<RectTransform>();
@@ -634,16 +658,11 @@ namespace LogisticsTycoon.UI.Editor
             hintRt.anchorMin = new Vector2(0.5f, 0.88f);
             hintRt.anchorMax = new Vector2(0.5f, 0.88f);
             hintRt.sizeDelta = new Vector2(650f, 40f);
-            Text hintTxt = hintObj.AddComponent<Text>();
-            hintTxt.font = arialFont;
-            hintTxt.fontSize = 20;
-            hintTxt.fontStyle = FontStyle.Bold;
-            hintTxt.alignment = TextAnchor.MiddleCenter;
-            hintTxt.color = new Color(0.36f, 0.39f, 0.44f, 1f); // 가독성 높은 소프트 슬레이트 차콜
-            hintTxt.text = "👇 아래의 버튼들을 클릭하여 손맛(컨베이어/박스덜컹/레이저/배송출발/테이프)을 체감해보세요!";
-            hintTxt.raycastTarget = false;
+            AddTmp(hintObj, "아래의 버튼들을 클릭하여 손맛(컨베이어/박스덜컹/레이저/배송출발/테이프)을 체감해보세요!",
+                20f, FontStyles.Bold, TextAlignmentOptions.Center,
+                new Color(0.36f, 0.39f, 0.44f, 1f)); // 가독성 높은 소프트 슬레이트 차콜
 
-            // 1. 메인 대형 버튼 (CLICK ME!) - 레퍼런스의 '🚚 배송 보내기' 스타일
+            // 1. 메인 대형 버튼 (CLICK ME!) - 레퍼런스의 '배송 보내기' 스타일
             GameObject mainBtnObj = CreateUIElement("MainBigButton", centerRt);
             RectTransform mainBtnRt = mainBtnObj.GetComponent<RectTransform>();
             mainBtnRt.anchorMin = new Vector2(0.5f, 0.56f);
@@ -692,14 +711,8 @@ namespace LogisticsTycoon.UI.Editor
             GameObject mainLabelObj = CreateUIElement("Label", bodyRt);
             RectTransform labelRt = mainLabelObj.GetComponent<RectTransform>();
             SetStretch(labelRt);
-            Text mainLabelTxt = mainLabelObj.AddComponent<Text>();
-            mainLabelTxt.font = arialFont;
-            mainLabelTxt.fontSize = 30;
-            mainLabelTxt.fontStyle = FontStyle.Bold;
-            mainLabelTxt.alignment = TextAnchor.MiddleCenter;
-            mainLabelTxt.color = new Color(0.22f, 0.18f, 0.15f, 1f); // 딥 차콜 브라운
-            mainLabelTxt.text = "🚚 배송 보내기 (CLICK ME!)";
-            mainLabelTxt.raycastTarget = false;
+            AddTmp(mainLabelObj, "배송 보내기 (CLICK ME!)", 30f, FontStyles.Bold,
+                TextAlignmentOptions.Center, new Color(0.22f, 0.18f, 0.15f, 1f)); // 딥 차콜 브라운
 
             // 메인 버튼 Button & UIButtonFeedback 세팅
             Button mainButton = mainBtnObj.AddComponent<Button>();
@@ -738,7 +751,7 @@ namespace LogisticsTycoon.UI.Editor
                 new Color(0.78f, 0.54f, 0.35f),         // 골판지 크라프트 브라운
                 new Color(0.58f, 0.38f, 0.22f, 1f),     // 3D 림 브라운
                 Color.white,
-                "📦 PARCEL",
+                "PARCEL",
                 20,
                 ripplePrefab,
                 floatingTextPrefab,
@@ -758,7 +771,7 @@ namespace LogisticsTycoon.UI.Editor
                 new Color(0.92f, 0.45f, 0.15f),          // 활기찬 트럭 오렌지
                 new Color(0.72f, 0.32f, 0.10f, 1f),     // 오렌지 림
                 Color.white,                             // 화이트 트럭 아이콘
-                "🚚",
+                "▶",
                 30,
                 ripplePrefab,
                 floatingTextPrefab,
@@ -778,7 +791,7 @@ namespace LogisticsTycoon.UI.Editor
                 new Color(0.24f, 0.36f, 0.52f),         // 유니폼 소프트 네이비 블루
                 new Color(0.16f, 0.24f, 0.38f, 1f),     // 네이비 림
                 Color.white,
-                "🚛 DISPATCH",
+                "DISPATCH",
                 20,
                 ripplePrefab,
                 floatingTextPrefab,
@@ -809,8 +822,6 @@ namespace LogisticsTycoon.UI.Editor
             Sprite roundedSprite,
             RectTransform fxContainer)
         {
-            Font arialFont = GetDefaultFont();
-
             GameObject root = CreateUIElement(name, parent);
             RectTransform rootRt = root.GetComponent<RectTransform>();
             rootRt.sizeDelta = size;
@@ -849,14 +860,7 @@ namespace LogisticsTycoon.UI.Editor
             GameObject labelObj = CreateUIElement("Label", bodyRt);
             RectTransform labelRt = labelObj.GetComponent<RectTransform>();
             SetStretch(labelRt);
-            Text txt = labelObj.AddComponent<Text>();
-            txt.font = arialFont;
-            txt.fontSize = fontSize;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = textColor;
-            txt.text = labelText;
-            txt.raycastTarget = false;
+            AddTmp(labelObj, labelText, fontSize, FontStyles.Bold, TextAlignmentOptions.Center, textColor);
 
             Button btn = root.AddComponent<Button>();
             btn.targetGraphic = bodyImg;
@@ -875,7 +879,7 @@ namespace LogisticsTycoon.UI.Editor
             RectTransform canvasRect,
             Sprite roundedSprite,
             out Button btnOrderRush,
-            out Text txtOrderRush,
+            out TMP_Text txtOrderRush,
             out Image imgOrderRush,
             out Button btnJelly,
             out Button btnDepth,
@@ -888,14 +892,14 @@ namespace LogisticsTycoon.UI.Editor
             out Button btnTruckRev,
             out Button btnTape,
             out Button btnTogRipple,
-            out Text txtTogRipple,
+            out TMP_Text txtTogRipple,
             out Button btnTogFloat,
-            out Text txtTogFloat,
+            out TMP_Text txtTogFloat,
             out Button btnTogSparkle,
-            out Text txtTogSparkle,
+            out TMP_Text txtTogSparkle,
             out Button btnReset)
         {
-            Font arialFont = GetDefaultFont();
+            TMP_FontAsset uiFont = GetDefaultFont();
 
             // Right Panel Root
             GameObject panelObj = CreateUIElement("RightControlPanel", canvasRect);
@@ -931,12 +935,12 @@ namespace LogisticsTycoon.UI.Editor
             vlg.childForceExpandHeight = false;
 
             // Section 0: Fever Mode (Order Rush)
-            CreateSectionLabel("🔥 SPECIAL FEVER MODE", panelRt, arialFont);
-            btnOrderRush = CreatePanelButton("Btn_OrderRush", "🔥 주문 폭주: OFF", new Color(0.85f, 0.34f, 0.25f), panelRt, roundedSprite, arialFont, out txtOrderRush);
+            CreateSectionLabel("SPECIAL FEVER MODE", panelRt, uiFont);
+            btnOrderRush = CreatePanelButton("Btn_OrderRush", "주문 폭주: OFF", new Color(0.85f, 0.34f, 0.25f), panelRt, roundedSprite, uiFont, out txtOrderRush);
             imgOrderRush = btnOrderRush.GetComponent<Image>();
 
             // Section 1: Motion Presets (10 Kinds)
-            CreateSectionLabel("🎮 MOTION PRESETS (10 KINDS)", panelRt, arialFont);
+            CreateSectionLabel("MOTION PRESETS (10 KINDS)", panelRt, uiFont);
 
             // 2열 그리드 컨테이너 생성
             GameObject gridObj = CreateUIElement("PresetsGrid", panelRt);
@@ -953,45 +957,39 @@ namespace LogisticsTycoon.UI.Editor
             glg.constraintCount = 2;
 
             // 1~5 기본 프리셋 (따뜻한 파스텔 웜 톤)
-            btnJelly = CreatePanelButton("Btn_Jelly", "1. 젤리 스쿼시", new Color(0.38f, 0.70f, 0.35f), gridRt, roundedSprite, arialFont);       // 세이지 클로버 그린 (#62B358)
-            btnDepth = CreatePanelButton("Btn_Depth", "2. 3D 뎁스 스위치", new Color(0.28f, 0.42f, 0.60f), gridRt, roundedSprite, arialFont);   // 소프트 네이비 블루
-            btnStamp = CreatePanelButton("Btn_Stamp", "3. 스탬프 쾅!", new Color(0.92f, 0.48f, 0.26f), gridRt, roundedSprite, arialFont);       // 테라코타 웜 오렌지 (#EB7A42)
-            btnNeon = CreatePanelButton("Btn_Neon", "4. 네온 펄스", new Color(0.62f, 0.45f, 0.72f), gridRt, roundedSprite, arialFont);          // 소프트 라벤더 웜 바이올렛
-            btnGentle = CreatePanelButton("Btn_Gentle", "5. 심플 팝", new Color(0.55f, 0.48f, 0.44f), gridRt, roundedSprite, arialFont);        // 웜 슬레이트 모카
+            btnJelly = CreatePanelButton("Btn_Jelly", "1. 젤리 스쿼시", new Color(0.38f, 0.70f, 0.35f), gridRt, roundedSprite, uiFont);       // 세이지 클로버 그린 (#62B358)
+            btnDepth = CreatePanelButton("Btn_Depth", "2. 3D 뎁스 스위치", new Color(0.28f, 0.42f, 0.60f), gridRt, roundedSprite, uiFont);   // 소프트 네이비 블루
+            btnStamp = CreatePanelButton("Btn_Stamp", "3. 스탬프 쾅!", new Color(0.92f, 0.48f, 0.26f), gridRt, roundedSprite, uiFont);       // 테라코타 웜 오렌지 (#EB7A42)
+            btnNeon = CreatePanelButton("Btn_Neon", "4. 네온 펄스", new Color(0.62f, 0.45f, 0.72f), gridRt, roundedSprite, uiFont);          // 소프트 라벤더 웜 바이올렛
+            btnGentle = CreatePanelButton("Btn_Gentle", "5. 심플 팝", new Color(0.55f, 0.48f, 0.44f), gridRt, roundedSprite, uiFont);        // 웜 슬레이트 모카
 
             // 6~10 물류 특화 신규 프리셋 (따뜻한 파스텔 웜 톤)
-            btnConveyor = CreatePanelButton("Btn_Conveyor", "6. 컨베이어 스냅", new Color(0.32f, 0.48f, 0.58f), gridRt, roundedSprite, arialFont); // 캐주얼 스틸 블루
-            btnBoxJolt = CreatePanelButton("Btn_BoxJolt", "7. 박스 덜컹 들썩임", new Color(0.72f, 0.52f, 0.35f), gridRt, roundedSprite, arialFont); // 골판지 크라프트 브라운 (#B88559)
-            btnBarcode = CreatePanelButton("Btn_Barcode", "8. 바코드 레이저", new Color(0.85f, 0.34f, 0.28f), gridRt, roundedSprite, arialFont);    // 브릭 레드 / 칠리 오렌지
-            btnTruckRev = CreatePanelButton("Btn_TruckRev", "9. 🚚 배송 출발 (Rev-Up)", new Color(0.92f, 0.45f, 0.15f), gridRt, roundedSprite, arialFont); // 트럭 오렌지 (#EB7326)
-            btnTape = CreatePanelButton("Btn_Tape", "10. 테이프 와이프", new Color(0.80f, 0.68f, 0.38f), gridRt, roundedSprite, arialFont);       // 크라프트 테이프 베이지
+            btnConveyor = CreatePanelButton("Btn_Conveyor", "6. 컨베이어 스냅", new Color(0.32f, 0.48f, 0.58f), gridRt, roundedSprite, uiFont); // 캐주얼 스틸 블루
+            btnBoxJolt = CreatePanelButton("Btn_BoxJolt", "7. 박스 덜컹 들썩임", new Color(0.72f, 0.52f, 0.35f), gridRt, roundedSprite, uiFont); // 골판지 크라프트 브라운 (#B88559)
+            btnBarcode = CreatePanelButton("Btn_Barcode", "8. 바코드 레이저", new Color(0.85f, 0.34f, 0.28f), gridRt, roundedSprite, uiFont);    // 브릭 레드 / 칠리 오렌지
+            btnTruckRev = CreatePanelButton("Btn_TruckRev", "9. 배송 출발 (Rev-Up)", new Color(0.92f, 0.45f, 0.15f), gridRt, roundedSprite, uiFont); // 트럭 오렌지 (#EB7326)
+            btnTape = CreatePanelButton("Btn_Tape", "10. 테이프 와이프", new Color(0.80f, 0.68f, 0.38f), gridRt, roundedSprite, uiFont);       // 크라프트 테이프 베이지
 
             // Section 2: FX Toggles
-            CreateSectionLabel("✨ ADD-ON FX TOGGLE", panelRt, arialFont);
+            CreateSectionLabel("ADD-ON FX TOGGLE", panelRt, uiFont);
 
-            btnTogRipple = CreatePanelButton("Btn_TogRipple", "🌊 물결 리플: ON", new Color(0.32f, 0.58f, 0.50f), panelRt, roundedSprite, arialFont, out txtTogRipple); // 세이지 틸
-            btnTogFloat = CreatePanelButton("Btn_TogFloat", "✨ 플로팅 텍스트: ON", new Color(0.82f, 0.55f, 0.25f), panelRt, roundedSprite, arialFont, out txtTogFloat); // 웜 앰버
-            btnTogSparkle = CreatePanelButton("Btn_TogSparkle", "⭐ 스파클 파티클: OFF", new Color(0.50f, 0.52f, 0.56f), panelRt, roundedSprite, arialFont, out txtTogSparkle); // 소프트 슬레이트
+            btnTogRipple = CreatePanelButton("Btn_TogRipple", "물결 리플: ON", new Color(0.32f, 0.58f, 0.50f), panelRt, roundedSprite, uiFont, out txtTogRipple); // 세이지 틸
+            btnTogFloat = CreatePanelButton("Btn_TogFloat", "플로팅 텍스트: ON", new Color(0.82f, 0.55f, 0.25f), panelRt, roundedSprite, uiFont, out txtTogFloat); // 웜 앰버
+            btnTogSparkle = CreatePanelButton("Btn_TogSparkle", "스파클 파티클: OFF", new Color(0.50f, 0.52f, 0.56f), panelRt, roundedSprite, uiFont, out txtTogSparkle); // 소프트 슬레이트
 
             // Section 3: Reset
-            CreateSectionLabel("⚙️ SYSTEM", panelRt, arialFont);
-            btnReset = CreatePanelButton("Btn_Reset", "🔄 기본값으로 초기화", new Color(0.82f, 0.35f, 0.32f), panelRt, roundedSprite, arialFont); // 웜 코랄 레드
+            CreateSectionLabel("SYSTEM", panelRt, uiFont);
+            btnReset = CreatePanelButton("Btn_Reset", "기본값으로 초기화", new Color(0.82f, 0.35f, 0.32f), panelRt, roundedSprite, uiFont); // 웜 코랄 레드
         }
 
-        private static void CreateSectionLabel(string title, RectTransform parent, Font font)
+        private static void CreateSectionLabel(string title, RectTransform parent, TMP_FontAsset font)
         {
             GameObject obj = CreateUIElement("Section_" + title, parent);
             RectTransform rt = obj.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(0, 26f);
 
-            Text txt = obj.AddComponent<Text>();
-            txt.font = font;
-            txt.fontSize = 16;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleLeft;
-            txt.color = new Color(0.25f, 0.22f, 0.20f, 1f); // 딥 차콜 브라운 (선명한 가독성)
-            txt.text = title;
-            txt.raycastTarget = false;
+            AddTmp(obj, title, 16f, FontStyles.Bold, TextAlignmentOptions.Left,
+                new Color(0.25f, 0.22f, 0.20f, 1f)); // 딥 차콜 브라운 (선명한 가독성)
         }
 
         private static Button CreatePanelButton(
@@ -1000,7 +998,7 @@ namespace LogisticsTycoon.UI.Editor
             Color color,
             RectTransform parent,
             Sprite roundedSprite,
-            Font font)
+            TMP_FontAsset font)
         {
             return CreatePanelButton(name, label, color, parent, roundedSprite, font, out _);
         }
@@ -1011,8 +1009,8 @@ namespace LogisticsTycoon.UI.Editor
             Color color,
             RectTransform parent,
             Sprite roundedSprite,
-            Font font,
-            out Text outText)
+            TMP_FontAsset font,
+            out TMP_Text outText)
         {
             GameObject btnObj = CreateUIElement(name, parent);
             RectTransform rt = btnObj.GetComponent<RectTransform>();
@@ -1034,16 +1032,7 @@ namespace LogisticsTycoon.UI.Editor
             RectTransform textRt = textObj.GetComponent<RectTransform>();
             SetStretch(textRt);
 
-            Text txt = textObj.AddComponent<Text>();
-            txt.font = font;
-            txt.fontSize = 15;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
-            txt.text = label;
-            txt.raycastTarget = false;
-
-            outText = txt;
+            outText = AddTmp(textObj, label, 15f, FontStyles.Bold, TextAlignmentOptions.Center, Color.white);
             return btn;
         }
 

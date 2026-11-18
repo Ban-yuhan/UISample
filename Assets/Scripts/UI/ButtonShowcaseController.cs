@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using UnityEngine.SceneManagement;
 using DG.Tweening;
 using LogisticsTycoon.Transitions;
@@ -17,12 +18,12 @@ namespace LogisticsTycoon.UI
         [SerializeField] private UIButtonFeedback[] subButtons;
 
         [Header("Status UI")]
-        [SerializeField] private Text currentModeText;
+        [SerializeField] private TMP_Text currentModeText;
 
         [Header("Order Rush Fever UI")]
         [SerializeField] private OrderRushOverlay orderRushOverlay;
         [SerializeField] private Button btnOrderRush;
-        [SerializeField] private Text textOrderRush;
+        [SerializeField] private TMP_Text textOrderRush;
         [SerializeField] private Image imgOrderRush;
 
         [Header("Motion Select Buttons (Presets 1~10)")]
@@ -39,11 +40,11 @@ namespace LogisticsTycoon.UI
 
         [Header("FX Toggle Buttons")]
         [SerializeField] private Button btnToggleRipple;
-        [SerializeField] private Text textToggleRipple;
+        [SerializeField] private TMP_Text textToggleRipple;
         [SerializeField] private Button btnToggleFloating;
-        [SerializeField] private Text textToggleFloating;
+        [SerializeField] private TMP_Text textToggleFloating;
         [SerializeField] private Button btnToggleSparkle;
-        [SerializeField] private Text textToggleSparkle;
+        [SerializeField] private TMP_Text textToggleSparkle;
 
         [Header("Reset Button")]
         [SerializeField] private Button btnReset;
@@ -88,7 +89,7 @@ namespace LogisticsTycoon.UI
                 btnTruckRev.onClick.AddListener(() =>
                 {
                     SelectMotion(MotionPreset.TruckRevUp);
-                    ShowBannerFeedback("🚚 부르릉~! 상차 완료, 배송 트럭 출발 대기 중!");
+                    ShowBannerFeedback("부르릉~! 상차 완료, 배송 트럭 출발 대기 중!");
                 });
             if (btnTape != null)
                 btnTape.onClick.AddListener(() => SelectMotion(MotionPreset.TapeStripWipe));
@@ -127,7 +128,7 @@ namespace LogisticsTycoon.UI
         {
             if (currentPreset == MotionPreset.TruckRevUp)
             {
-                ShowBannerFeedback("🚚 부르릉~! 상차 완료, 배송 트럭 출발 대기 중!");
+                ShowBannerFeedback("부르릉~! 상차 완료, 배송 트럭 출발 대기 중!");
             }
         }
 
@@ -262,7 +263,7 @@ namespace LogisticsTycoon.UI
                 MotionPreset.ConveyorSnap => "6. 컨베이어 스냅 (Conveyor Snap)",
                 MotionPreset.BoxJolt => "7. 박스 덜컹 들썩임 (Box Jolt)",
                 MotionPreset.BarcodeLaser => "8. 바코드 레이저 스캔 (Barcode Laser)",
-                MotionPreset.TruckRevUp => "9. 🚚 배송 출발 (Rev-Up)",
+                MotionPreset.TruckRevUp => "9. 배송 출발 (Rev-Up)",
                 MotionPreset.TapeStripWipe => "10. 박스 테이프 와이프 (Tape Wipe)",
                 _ => currentPreset.ToString()
             };
@@ -275,7 +276,7 @@ namespace LogisticsTycoon.UI
             {
                 if (isOrderRushActive)
                 {
-                    currentModeText.text = $"<color=#FF4757><b>🚨 주문 폭주 피버 모드 발동 중! (택배 처리 속도 2배 FEVER!)</b></color>\n[선택 모드]: <b>{modeName}</b> | [활성 FX]: 물결 {rippleStr} | 플로팅 {floatingStr} | 스파클 {sparkleStr}";
+                    currentModeText.text = $"<color=#FF4757><b>주문 폭주 피버 모드 발동 중! (택배 처리 속도 2배 FEVER!)</b></color>\n[선택 모드]: <b>{modeName}</b> | [활성 FX]: 물결 {rippleStr} | 플로팅 {floatingStr} | 스파클 {sparkleStr}";
                 }
                 else
                 {
@@ -285,7 +286,7 @@ namespace LogisticsTycoon.UI
 
             if (textOrderRush != null)
             {
-                textOrderRush.text = isOrderRushActive ? "🔥 주문 폭주: ON (FEVER!)" : "🔥 주문 폭주: OFF";
+                textOrderRush.text = isOrderRushActive ? "주문 폭주: ON (FEVER!)" : "주문 폭주: OFF";
             }
 
             if (imgOrderRush != null)
@@ -295,17 +296,17 @@ namespace LogisticsTycoon.UI
 
             if (textToggleRipple != null)
             {
-                textToggleRipple.text = $"🌊 물결 리플: {(isRippleEnabled ? "ON" : "OFF")}";
+                textToggleRipple.text = $"물결 리플: {(isRippleEnabled ? "ON" : "OFF")}";
             }
 
             if (textToggleFloating != null)
             {
-                textToggleFloating.text = $"✨ 플로팅 텍스트: {(isFloatingEnabled ? "ON" : "OFF")}";
+                textToggleFloating.text = $"플로팅 텍스트: {(isFloatingEnabled ? "ON" : "OFF")}";
             }
 
             if (textToggleSparkle != null)
             {
-                textToggleSparkle.text = $"⭐ 스파클 파티클: {(isSparkleEnabled ? "ON" : "OFF")}";
+                textToggleSparkle.text = $"스파클 파티클: {(isSparkleEnabled ? "ON" : "OFF")}";
             }
         }
 
@@ -314,7 +315,7 @@ namespace LogisticsTycoon.UI
         public void SetReferences(
             UIButtonFeedback main,
             UIButtonFeedback[] subs,
-            Text status,
+            TMP_Text status,
             Button jelly,
             Button depth,
             Button stamp,
@@ -326,15 +327,15 @@ namespace LogisticsTycoon.UI
             Button truckRev,
             Button tape,
             Button togRipple,
-            Text togRippleTxt,
+            TMP_Text togRippleTxt,
             Button togFloat,
-            Text togFloatTxt,
+            TMP_Text togFloatTxt,
             Button togSparkle,
-            Text togSparkleTxt,
+            TMP_Text togSparkleTxt,
             Button resetBtn,
             OrderRushOverlay rushOverlay = null,
             Button rushBtn = null,
-            Text rushTxt = null,
+            TMP_Text rushTxt = null,
             Image rushImg = null)
         {
             mainButton = main;

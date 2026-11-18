@@ -1,11 +1,12 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 using DG.Tweening;
 
 namespace LogisticsTycoon.UI
 {
     /// <summary>
     /// 버튼 클릭 시 상향 부유하며 페이드아웃되는 플로팅 텍스트 이펙트
+    /// 외곽선은 TMP 머티리얼 프리셋(Outline)으로 처리하며, 정점 알파 페이드 시 외곽선도 함께 사라진다.
     /// </summary>
     public class FloatingText : MonoBehaviour
     {
@@ -16,8 +17,7 @@ namespace LogisticsTycoon.UI
         [SerializeField] private Ease fadeEase = Ease.InQuad;
 
         [Header("Components")]
-        [SerializeField] private Text messageText;
-        [SerializeField] private Outline outline;
+        [SerializeField] private TMP_Text messageText;
 
         private RectTransform rectTransform;
         private Sequence floatSequence;
@@ -27,15 +27,11 @@ namespace LogisticsTycoon.UI
             rectTransform = GetComponent<RectTransform>();
             if (messageText == null)
             {
-                messageText = GetComponentInChildren<Text>();
+                messageText = GetComponentInChildren<TMP_Text>();
             }
             if (messageText != null)
             {
                 messageText.raycastTarget = false;
-            }
-            if (outline == null)
-            {
-                outline = GetComponentInChildren<Outline>();
             }
         }
 
@@ -44,7 +40,7 @@ namespace LogisticsTycoon.UI
             if (rectTransform == null)
                 rectTransform = GetComponent<RectTransform>();
             if (messageText == null)
-                messageText = GetComponentInChildren<Text>();
+                messageText = GetComponentInChildren<TMP_Text>();
 
             if (messageText != null)
             {
@@ -68,12 +64,8 @@ namespace LogisticsTycoon.UI
             floatSequence.Join(rectTransform.DOAnchorPosY(targetY, duration).SetEase(moveEase));
             if (messageText != null)
             {
-                floatSequence.Join(messageText.DOFade(0f, duration).SetEase(fadeEase));
-            }
-            if (outline != null)
-            {
-                Color outCol = outline.effectColor;
-                floatSequence.Join(DOTween.To(() => outline.effectColor, x => outline.effectColor = x, new Color(outCol.r, outCol.g, outCol.b, 0f), duration));
+                TMP_Text txt = messageText;
+                floatSequence.Join(DOTween.To(() => txt.alpha, a => txt.alpha = a, 0f, duration).SetEase(fadeEase));
             }
 
             floatSequence.OnComplete(() =>

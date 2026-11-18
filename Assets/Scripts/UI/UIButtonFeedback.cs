@@ -784,11 +784,11 @@ namespace LogisticsTycoon.UI
             }
             else
             {
-                Text t = textObj.GetComponentInChildren<Text>();
+                TMPro.TMP_Text t = textObj.GetComponentInChildren<TMPro.TMP_Text>();
                 if (t != null)
                 {
                     t.text = msg;
-                    t.DOFade(0f, 0.65f).SetUpdate(true);
+                    DOTween.To(() => t.alpha, a => t.alpha = a, 0f, 0.65f).SetUpdate(true).SetTarget(t);
                 }
                 if (textRect != null)
                 {
