@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>오프라인 재화 보상 UI 인터랙티브 샘플 (5종)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    .game-ui {
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", sans-serif;
+    }
+    .mono-num {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    /* 단색 플랫 그림자 */
+    .flat-shadow-sm { box-shadow: 0 3px 0 #C7B293; }
+    .flat-shadow-md { box-shadow: 0 5px 0 #B69E7D; }
+    .flat-shadow-dark { box-shadow: 0 4px 0 #35261B; }
+    .btn-press { transition: transform 0.08s ease, box-shadow 0.08s ease; }
+    .btn-press:active { transform: translateY(3px); box-shadow: none !important; }
+
+    /* 단색 바코드 패턴 */
+    .barcode {
+      background-image: repeating-linear-gradient(
+        90deg,
+        #4A3728 0px, #4A3728 2px,
+        transparent 2px, transparent 4px,
+        #4A3728 4px, #4A3728 5px,
+        transparent 5px, transparent 8px,
+        #4A3728 8px, #4A3728 11px,
+        transparent 11px, transparent 13px,
+        #4A3728 13px, #4A3728 15px,
+        transparent 15px, transparent 17px
+      );
+    }
+    /* 줄노트 */
+    .note-lines {
+      background-image: repeating-linear-gradient(
+        180deg,
+        transparent 0px,
+        transparent 31px,
+        #E6D6BE 31px,
+        #E6D6BE 32px
+      );
+    }
+
+    /* 1. 바코드 레이저 스캔 애니메이션 */
+    @keyframes scanSweep {
+      0% { left: 0%; opacity: 1; }
+      50% { left: calc(100% - 4px); opacity: 1; }
+      100% { left: 0%; opacity: 1; }
+    }
+    .laser-bar {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 4px;
+      background: #D94A38;
+      animation: scanSweep 0.55s ease-in-out infinite;
+    }
+    @keyframes scanFlash {
+      0%, 100% { background-color: #EFE4D2; }
+      50% { background-color: #F7D9CF; }
+    }
+    .animate-scan-flash { animation: scanFlash 0.28s ease-in-out 2; }
+
+    /* 도장 쾅 애니메이션 */
+    @keyframes stampSlam {
+      0% { transform: scale(2.1) rotate(-18deg); opacity: 0; }
+      65% { transform: scale(0.92) rotate(-7deg); opacity: 1; }
+      100% { transform: scale(1) rotate(-8deg); opacity: 1; }
+    }
+    .animate-stamp { animation: stampSlam 0.26s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+    /* 팝업 살짝 흔들림 (도장 찍힐 때) */
+    @keyframes cardShake {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-3px, 3px); }
+      50% { transform: translate(3px, -2px); }
+      75% { transform: translate(-2px, 2px); }
+    }
+    .animate-shake { animation: cardShake 0.22s ease-out; }
+
+    /* 팝업 넘어가기(퇴장) */
+    .popup-exit {
+      transition: transform 0.36s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s ease;
+      transform: translateY(-28px) scale(0.94);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* 2. 봉투 개봉 종이 슬라이드업 애니메이션 */
+    @keyframes paperRise {
+      0% { transform: translateY(72px); opacity: 0.2; }
+      100% { transform: translateY(0px); opacity: 1; }
+    }
+    .animate-paper-rise {
+      animation: paperRise 0.44s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* 서명 캔버스 */
+    canvas.sign-pad {
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    /* 코인 플로팅 토스트 */
+    @keyframes floatUp {
+      0% { transform: translateY(10px) scale(0.92); opacity: 0; }
+      20% { transform: translateY(0) scale(1); opacity: 1; }
+      85% { transform: translateY(-8px) scale(1); opacity: 1; }
+      100% { transform: translateY(-18px) scale(0.96); opacity: 0; }
+    }
+    .animate-float-toast { animation: floatUp 1.35s ease-out forwards; }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+
+    <!-- 상단 헤더 & 컨트롤 바 -->
+    <header class="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="text-lg font-bold tracking-tight">오프라인 재화 보상 UI — 인터랙티브 연출 샘플 (5종)</h1>
+          <p class="text-xs text-[var(--muted-foreground)] mt-0.5">
+            운송장 바코드 스캔 · 월급봉투 개봉 · 클립보드 직접 서명(블루아카식) · 미니멀/메모 확인 연출 체험
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnViewSingle" onclick="setViewMode('single')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] transition">
+            모바일 1개씩 체험
+          </button>
+          <button id="btnViewGrid" onclick="setViewMode('grid')"
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold border border-[var(--border)] transition">
+            5개 한눈에 비교
+          </button>
+        </div>
+      </div>
+
+      <!-- 실시간 시뮬레이션 컨트롤 -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-[var(--border)] text-xs">
+        <label class="flex flex-col gap-1.5">
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">부재 시간 (상한 5시간)</span>
+            <span id="lblElapsed" class="font-semibold mono-num">3시간 20분</span>
+          </div>
+          <input id="rangeMinutes" type="range" min="1" max="360" value="200" class="accent-[var(--primary)] w-full" />
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <div class="flex justify-between">
+            <span class="text-[var(--muted-foreground)]">고용 알바 수 (평균 스탯 12)</span>
+            <span id="lblWorkers" class="font-semibold mono-num">3명</span>
+          </div>
+          <input id="rangeWorkers" type="range" min="1" max="6" value="3" class="accent-[var(--primary)] w-full" />
+        </label>
+
+        <div class="flex items-center justify-between bg-[var(--background)] rounded-lg px-3 py-2 border border-[var(--border)]">
+          <div>
+            <div class="text-[11px] text-[var(--muted-foreground)]">GDD 9.7 계산 결과 <span id="lblCapBadge" class="ml-1 font-semibold"></span></div>
+            <div id="lblSummary" class="mono-num font-bold mt-0.5 text-sm"></div>
+          </div>
+          <button onclick="resetAll()" class="px-2.5 py-1.5 rounded-md text-[11px] font-semibold bg-[var(--card)] border border-[var(--border)] hover:opacity-80">
+            연출 초기화
+          </button>
+        </div>
+      </div>
+
+      <!-- 단일 보기용 컨셉 탭 -->
+      <div id="conceptTabs" class="flex flex-wrap gap-2 pt-2 border-t border-[var(--border)]"></div>
+    </header>
+
+    <!-- 프리뷰 스테이지 -->
+    <main id="stage"></main>
+
+  </div>
+
+  <script>
+    const CONCEPTS = [
+      {
+        id: 'waybill',
+        num: '01',
+        name: '택배 운송장',
+        tag: '확인 → 바코드 스캔 → 확인 쾅!',
+        actionHint: '하단 [확인] 버튼을 누르면 바코드를 스캔하고 인수 확인이 뜬 뒤 넘어갑니다.',
+        desc: '물류센터 정체성이 가장 강한 송장 스타일. 확인을 누르면 바코드 레이저가 훑고 지나가며 스캔 완료 → 확인 도장 → 수령 완료로 넘어갑니다.'
+      },
+      {
+        id: 'envelope',
+        num: '02',
+        name: '크래프트 월급 봉투',
+        tag: '닫힌 봉투 클릭 → 개봉 → 종이 등장',
+        actionHint: '닫혀있는 월급 봉투를 눌러 개봉하면 안쪽에서 정산 종이가 올라옵니다.',
+        desc: '처음에는 봉투가 닫혀있어 "무엇이 들었을까" 기대감을 줍니다. 터치하면 덮개가 열리고 정산 종이가 위로 쑥 올라오며 금액을 확인 후 수령합니다.'
+      },
+      {
+        id: 'clipboard',
+        num: '03',
+        name: '클립보드 업무 보고서',
+        tag: '직접 서명(블루아카식) → 도장 쾅!',
+        actionHint: '하단 서명란에 마우스/터치로 직접 서명을 그어보세요! 자동으로 결재 도장이 찍히며 넘어갑니다.',
+        desc: '블루 아카이브 결재 연출처럼 서명란에 직접 선을 그으면 결재 완료 도장이 화면 흔들림과 함께 쾅! 찍히고 자연스럽게 넘어갑니다.'
+      },
+      {
+        id: 'minimal',
+        num: '04',
+        name: '웜 미니멀 카드',
+        tag: '깔끔한 확인 버튼',
+        actionHint: '[확인] 버튼을 누르면 군더더기 없이 바로 지갑에 담깁니다.',
+        desc: '장식과 연출을 최소화해 매일 접속해도 피로도가 없는 모던 베이지 단색 팝업입니다.'
+      },
+      {
+        id: 'memo',
+        num: '05',
+        name: '책상 위 포스트잇 메모',
+        tag: '친근한 확인 버튼',
+        actionHint: '알바생의 메모를 보고 [확인] 버튼을 눌러 수령합니다.',
+        desc: '마스킹 테이프와 줄노트 감성으로 알바생이 사장님께 남겨둔 듯한 가볍고 친근한 확인 팝업입니다.'
+      }
+    ];
+
+    // 각 컨셉별 연출 상태머신
+    // waybill: 'idle' | 'scanning' | 'confirmed' | 'done'
+    // envelope: 'closed' | 'opening' | 'open' | 'done'
+    // clipboard: 'idle' | 'stamped' | 'done'
+    // minimal: 'idle' | 'done'
+    // memo: 'idle' | 'done'
+    const state = {
+      viewMode: 'single',
+      activeId: 'waybill',
+      elapsedMinutes: 200,
+      workers: 3,
+      walletGold: 12450,
+      phase: {
+        waybill: 'idle',
+        envelope: 'closed',
+        clipboard: 'idle',
+        minimal: 'idle',
+        memo: 'idle'
+      },
+      toastText: null,
+      signatureDataUrl: null,
+      timers: []
+    };
+
+    function clearTimersFor(id) {
+      state.timers = state.timers.filter(t => {
+        if (!id || t.id === id) {
+          clearTimeout(t.handle);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function later(id, ms, fn) {
+      const handle = setTimeout(fn, ms);
+      state.timers.push({ id, handle });
+    }
+
+    function resetConcept(id) {
+      clearTimersFor(id);
+      state.phase[id] = id === 'envelope' ? 'closed' : 'idle';
+      if (id === 'clipboard') state.signatureDataUrl = null;
+      render();
+    }
+
+    function resetAll() {
+      clearTimersFor(null);
+      state.phase = {
+        waybill: 'idle',
+        envelope: 'closed',
+        clipboard: 'idle',
+        minimal: 'idle',
+        memo: 'idle'
+      };
+      state.toastText = null;
+      state.signatureDataUrl = null;
+      render();
+    }
+
+    function calcOffline() {
+      const maxMin = 300;
+      const countedMin = Math.min(state.elapsedMinutes, maxMin);
+      const isCapped = state.elapsedMinutes >= maxMin;
+      const days = (countedMin * 60) / 360.0;
+      const totalStat = state.workers * 12;
+      const gross = Math.floor(totalStat * 10 * days);
+      const wages = Math.ceil(totalStat * 4 * days);
+      const net = Math.max(0, gross - wages);
+      const pct = Math.min(100, Math.round((countedMin / maxMin) * 100));
+      return {
+        elapsedMin: state.elapsedMinutes,
+        countedMin,
+        isCapped,
+        workers: state.workers,
+        gross,
+        wages,
+        net,
+        pct,
+        elapsedText: formatDuration(state.elapsedMinutes),
+        countedText: formatDuration(countedMin)
+      };
+    }
+
+    function formatDuration(totalMin) {
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      if (h === 0) return `${m}분`;
+      if (m === 0) return `${h}시간`;
+      return `${h}시간 ${m}분`;
+    }
+
+    function fmt(n) { return n.toLocaleString('ko-KR'); }
+
+    function grantReward(id) {
+      const d = calcOffline();
+      state.walletGold += d.net;
+      state.toastText = `+${fmt(d.net)} G 지갑에 지급 완료!`;
+      state.phase[id] = 'done';
+      render();
+      later(id, 1450, () => {
+        state.toastText = null;
+        render();
+      });
+    }
+
+    // --- 인터랙션 핸들러 ---
+
+    // 1. 택배 운송장: 확인 -> 바코드 스캔 -> 확인 쾅 -> 넘어감
+    function onWaybillConfirm() {
+      if (state.phase.waybill !== 'idle') return;
+      state.phase.waybill = 'scanning';
+      render();
+      later('waybill', 750, () => {
+        state.phase.waybill = 'confirmed';
+        render();
+        later('waybill', 850, () => {
+          grantReward('waybill');
+        });
+      });
+    }
+
+    // 2. 월급 봉투: 닫힌 봉투 클릭 -> 덮개 열리고 종이 올라옴 -> 확인 클릭 시 넘어감
+    function onEnvelopeOpen() {
+      if (state.phase.envelope !== 'closed') return;
+      state.phase.envelope = 'open';
+      render();
+    }
+
+    function onEnvelopeClaim() {
+      if (state.phase.envelope !== 'open') return;
+      grantReward('envelope');
+    }
+
+    // 3. 클립보드: 서명 완료 시 -> 도장 쾅 -> 넘어감
+    function onClipboardSigned(canvasEl) {
+      if (state.phase.clipboard !== 'idle') return;
+      if (canvasEl) {
+        try { state.signatureDataUrl = canvasEl.toDataURL(); } catch (e) {}
+      }
+      state.phase.clipboard = 'stamped';
+      render();
+      later('clipboard', 950, () => {
+        grantReward('clipboard');
+      });
+    }
+
+    function autoSignClipboard(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || state.phase.clipboard !== 'idle') return;
+      const hint = document.getElementById(`${canvasId}-hint`);
+      if (hint) hint.style.display = 'none';
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = '#4A3728';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const pts = [
+        [24, 42], [44, 22], [52, 46], [76, 18], [90, 44],
+        [114, 26], [136, 38], [164, 24], [196, 34], [226, 30]
+      ];
+      let i = 0;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      const step = () => {
+        i++;
+        if (i < pts.length) {
+          ctx.lineTo(pts[i][0], pts[i][1]);
+          ctx.stroke();
+          later('clipboard', 28, step);
+        } else {
+          later('clipboard', 160, () => onClipboardSigned(canvas));
+        }
+      };
+      step();
+    }
+
+    // 4 & 5. 단순 확인 버튼
+    function onSimpleConfirm(id) {
+      if (state.phase[id] !== 'idle') return;
+      grantReward(id);
+    }
+
+    // ---------------------------------------------------------
+    // 5가지 컨셉 렌더러
+    // ---------------------------------------------------------
+
+    function renderDismissedCard(id, d) {
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto rounded-2xl border-2 border-dashed border-[#D9C3A3] bg-[#FAF5EC]/90 p-6 text-center text-[#4A3728] space-y-3">
+          <div class="w-11 h-11 rounded-full bg-[#6F825A] text-[#FAF5EC] mx-auto flex items-center justify-center text-lg font-black">✓</div>
+          <div>
+            <div class="text-sm font-black">보상 수령 완료 · 팝업 닫힘</div>
+            <div class="text-xs text-[#7A624D] mt-1">보유 재화에 <span class="mono-num font-bold text-[#C86D44]">+${fmt(d.net)} G</span>가 반영되었습니다.</div>
+          </div>
+          <button onclick="resetConcept('${id}')"
+            class="btn-press px-4 py-2 rounded-lg text-xs font-extrabold bg-[#4A3728] text-[#FAF5EC] flat-shadow-dark">
+            다시 팝업 띄우기
+          </button>
+        </div>
+      `;
+    }
+
+    // 01. 택배 운송장 (확인 -> 바코드 스캔 -> 확인 쾅 -> 넘어가기)
+    function renderWaybill(d) {
+      const p = state.phase.waybill;
+      if (p === 'done') return renderDismissedCard('waybill', d);
+
+      const scanning = p === 'scanning';
+      const confirmed = p === 'confirmed';
+
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto rounded-lg overflow-hidden border-[3px] border-[#4A3728] bg-[#FAF5EC] text-[#4A3728] flat-shadow-dark relative ${confirmed ? 'animate-shake' : ''}">
+          <!-- 상단 헤더 -->
+          <div class="bg-[#4A3728] text-[#FAF5EC] px-4 py-2.5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="px-1.5 py-0.5 text-[10px] font-black tracking-wider bg-[#D9824B] text-[#FAF5EC] rounded-sm">OFFLINE</span>
+              <span class="text-sm font-extrabold tracking-tight">부재중 정산 운송장</span>
+            </div>
+            <span class="mono-num text-[11px] opacity-80">APC-097</span>
+          </div>
+
+          <!-- 바코드 스캔 영역 -->
+          <div class="px-4 py-3 bg-[#EFE4D2] border-b-2 border-[#4A3728] flex items-center justify-between gap-3 ${scanning ? 'animate-scan-flash' : ''}">
+            <div>
+              <div class="text-[11px] font-bold text-[#7A624D]">
+                ${scanning ? '바코드 스캔 중...' : confirmed ? '스캔 완료 (BEEP!)' : '부재 경과 시간'}
+              </div>
+              <div class="text-lg font-black tracking-tight flex items-center gap-1.5">
+                <span>${d.elapsedText}</span>
+                ${d.isCapped ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#C86D44] text-[#FAF5EC] font-bold">MAX 5h</span>` : ''}
+              </div>
+            </div>
+            <div class="relative w-24 h-10 shrink-0 rounded bg-[#FAF5EC] border border-[#C7B293] p-1.5 overflow-hidden">
+              <div class="w-full h-full barcode ${scanning ? 'opacity-100' : 'opacity-85'}"></div>
+              ${scanning ? `<div class="laser-bar"></div>` : ''}
+              ${confirmed ? `
+                <div class="absolute inset-0 bg-[#6F825A]/90 text-[#FAF5EC] flex items-center justify-center text-[10px] font-black tracking-wider">
+                  SCANNED ✓
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- 2단 메타 표 -->
+          <div class="grid grid-cols-2 border-b-2 border-[#4A3728] text-xs">
+            <div class="px-4 py-2.5 border-r-2 border-[#4A3728]">
+              <div class="text-[10px] font-bold text-[#8C735B]">투입 알바</div>
+              <div class="font-extrabold text-sm mt-0.5">총 ${d.workers}명 근무</div>
+            </div>
+            <div class="px-4 py-2.5">
+              <div class="text-[10px] font-bold text-[#8C735B]">인정 비율 (최대 5h)</div>
+              <div class="font-extrabold text-sm mt-0.5 mono-num">${d.countedText} (${d.pct}%)</div>
+            </div>
+          </div>
+
+          <!-- 정산 내역 -->
+          <div class="px-4 py-3 space-y-2 text-xs bg-[#FAF5EC]">
+            <div class="flex justify-between items-center">
+              <span class="text-[#7A624D] font-semibold">알바 수익 합계</span>
+              <span class="mono-num font-bold text-[#4A3728]">+${fmt(d.gross)} G</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-[#7A624D] font-semibold">알바 월급 차감</span>
+              <span class="mono-num font-bold text-[#B8523A]">-${fmt(d.wages)} G</span>
+            </div>
+            <div class="border-t-2 border-dashed border-[#C7B293] pt-2.5 mt-1 flex justify-between items-baseline">
+              <span class="text-xs font-black">최종 수령액</span>
+              <span class="mono-num text-2xl font-black text-[#C86D44]">+${fmt(d.net)}<span class="text-sm ml-0.5">G</span></span>
+            </div>
+          </div>
+
+          <!-- 확인 도장 오버레이 -->
+          ${confirmed ? `
+            <div class="absolute inset-0 bg-[#4A3728]/20 flex items-center justify-center pointer-events-none z-20">
+              <div class="animate-stamp px-5 py-2.5 rounded-lg border-[4px] border-[#C86D44] bg-[#FAF5EC] text-[#C86D44] text-center shadow-sm">
+                <div class="text-xl font-black tracking-widest">확인 완료</div>
+                <div class="mono-num text-[10px] font-bold tracking-wider mt-0.5">BARCODE VERIFIED</div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- 하단 버튼 -->
+          <div class="px-4 pb-4 pt-1 bg-[#FAF5EC]">
+            <button onclick="onWaybillConfirm()" ${p !== 'idle' ? 'disabled' : ''}
+              class="btn-press w-full py-3 rounded-md font-black text-sm tracking-wide border-2 border-[#4A3728] ${
+                scanning ? 'bg-[#8C735B] text-[#FAF5EC]' :
+                confirmed ? 'bg-[#6F825A] text-[#FAF5EC]' :
+                'bg-[#D9824B] text-[#FAF5EC]'
+              } flat-shadow-dark">
+              ${scanning ? '바코드 스캔 중...' : confirmed ? '✓ 확인 완료!' : '확인 (바코드 스캔)'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // 02. 크래프트 월급 봉투 (닫혀있음 -> 누르면 열리고 종이 올라옴 -> 확인)
+    function renderEnvelope(d) {
+      const p = state.phase.envelope;
+      if (p === 'done') return renderDismissedCard('envelope', d);
+
+      const isOpen = p === 'open';
+
+      if (!isOpen) {
+        // 닫혀있는 봉투 상태
+        return `
+          <div class="game-ui w-full max-w-[330px] mx-auto py-6">
+            <div onclick="onEnvelopeOpen()"
+              class="cursor-pointer group relative rounded-2xl bg-[#D6BC96] border-[3px] border-[#8A6C48] overflow-hidden flat-shadow-dark transition-transform hover:-translate-y-1">
+              <!-- 닫힌 삼각형 덮개 (SVG 단색) -->
+              <div class="relative w-full h-36 bg-[#C9AC82] border-b-2 border-[#A68963]" style="clip-path: polygon(0 0, 100% 0, 50% 92%);"></div>
+
+              <!-- 중앙 봉인 단추 & 끈 -->
+              <div class="relative -mt-9 flex flex-col items-center">
+                <div class="w-12 h-12 rounded-full bg-[#C86D44] border-[3px] border-[#4A3728] flex items-center justify-center text-[#FAF5EC] text-xs font-black shadow-sm group-hover:scale-105 transition-transform">
+                  OPEN
+                </div>
+              </div>
+
+              <!-- 봉투 겉면 라벨 -->
+              <div class="px-6 pt-4 pb-6 text-center text-[#4A3728]">
+                <div class="inline-block px-3 py-1 rounded bg-[#FAF5EC] border border-[#A68963] text-[11px] font-black tracking-wide">
+                  부재중 정산 월급 봉투
+                </div>
+                <div class="text-sm font-extrabold mt-3 text-[#5A422B]">
+                  알바 ${d.workers}명이 <span class="text-[#4A3728] underline decoration-[#C86D44] decoration-2">${d.elapsedText}</span> 동안<br/>일한 정산서가 도착했어요
+                </div>
+                <div class="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#4A3728] text-[#FAF5EC] text-xs font-black">
+                  터치해서 봉투 열기
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // 열린 상태: 봉투 뒤쪽 덮개가 위로 펼쳐지고 정산 종이가 쑥 올라온 상태
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto pt-2 relative">
+          <!-- 열린 봉투 위쪽 덮개 (뒤쪽 레이어) -->
+          <div class="mx-4 h-7 rounded-t-xl bg-[#B89870] border-2 border-b-0 border-[#8A6C48]"></div>
+
+          <!-- 안쪽에서 쑥 올라온 정산 종이 -->
+          <div class="animate-paper-rise mx-3 -mt-3 rounded-t-xl bg-[#FAF5EC] border-2 border-b-0 border-[#C7B293] px-5 pt-4 pb-5 text-[#4A3728] relative z-10">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-[11px] font-bold text-[#9A7E63]">부재중 정산서</div>
+                <div class="text-base font-black mt-0.5">${d.elapsedText} 근무 완료</div>
+              </div>
+              <div class="w-11 h-11 rounded-full border-2 border-[#C86D44] text-[#C86D44] flex flex-col items-center justify-center text-[9px] font-black leading-tight rotate-[-10deg] shrink-0">
+                <span>정산</span>
+                <span>완료</span>
+              </div>
+            </div>
+
+            <div class="mt-3 rounded-lg bg-[#F2E7D5] px-4 py-3 text-center">
+              <div class="text-[11px] font-bold text-[#8A7058]">최종 지급액</div>
+              <div class="mono-num text-3xl font-black text-[#4A3728] mt-0.5">+${fmt(d.net)}<span class="text-base font-extrabold text-[#C86D44] ml-1">G</span></div>
+            </div>
+
+            <div class="mt-3 space-y-1.5 text-xs">
+              <div class="flex justify-between text-[#7A624D]">
+                <span>알바 ${d.workers}명 수익</span>
+                <span class="mono-num font-bold text-[#4A3728]">+${fmt(d.gross)} G</span>
+              </div>
+              <div class="flex justify-between text-[#7A624D]">
+                <span>월급 차감</span>
+                <span class="mono-num font-bold text-[#B8523A]">-${fmt(d.wages)} G</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 앞쪽 봉투 주머니 -->
+          <div class="rounded-b-2xl rounded-t-md bg-[#D6BC96] border-2 border-[#8A6C48] px-5 pt-4 pb-4 text-[#4A3728] flat-shadow-dark relative z-20">
+            <div class="flex items-center justify-between text-[11px] font-bold text-[#6E5338] mb-1.5">
+              <span>최대 5시간 누적</span>
+              <span class="mono-num">${d.countedText} / 5시간</span>
+            </div>
+            <div class="w-full h-2.5 rounded-full bg-[#BFA37C] overflow-hidden mb-3.5">
+              <div class="h-full rounded-full bg-[#4A3728]" style="width:${d.pct}%"></div>
+            </div>
+
+            <button onclick="onEnvelopeClaim()"
+              class="btn-press w-full py-3 rounded-xl font-black text-sm bg-[#4A3728] text-[#FAF5EC] flat-shadow-dark">
+              보상 받기 (+${fmt(d.net)} G)
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // 03. 클립보드 (블루아카이브처럼 직접 서명 -> 도장 쾅 -> 넘어가기)
+    function renderClipboard(d, suffix) {
+      const p = state.phase.clipboard;
+      if (p === 'done') return renderDismissedCard('clipboard', d);
+
+      const stamped = p === 'stamped';
+      const canvasId = `sign-pad-${suffix}`;
+      const segments = 10;
+      const filled = Math.round((d.pct / 100) * segments);
+      let segHtml = '';
+      for (let i = 0; i < segments; i++) {
+        segHtml += `<div class="h-2.5 flex-1 rounded-sm ${i < filled ? 'bg-[#C86D44]' : 'bg-[#E2D3BC]'}"></div>`;
+      }
+
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto pt-3 relative ${stamped ? 'animate-shake' : ''}">
+          <!-- 상단 클립 -->
+          <div class="w-28 h-6 rounded-t-lg bg-[#8C6D4F] border-2 border-[#4A3728] mx-auto -mb-3 relative z-10 flex items-center justify-center">
+            <div class="w-12 h-1.5 rounded-full bg-[#EFE4D2]"></div>
+          </div>
+
+          <div class="rounded-2xl bg-[#B89872] border-2 border-[#4A3728] p-2.5 flat-shadow-dark">
+            <div class="rounded-xl bg-[#FAF5EC] border border-[#D4BC99] px-4 pt-4 pb-3.5 text-[#4A3728] relative">
+              <div class="flex items-center justify-between border-b-2 border-[#EFE4D2] pb-2.5">
+                <div>
+                  <div class="text-[10px] font-extrabold text-[#8C735B] tracking-wide">부재중 결재 보고서</div>
+                  <div class="text-base font-black">알바 ${d.workers}명 근무 완료</div>
+                </div>
+                <span class="mono-num text-xs font-extrabold px-2 py-0.5 rounded bg-[#EFE4D2]">${d.countedText}</span>
+              </div>
+
+              <!-- 세그먼트 바 -->
+              <div class="mt-2.5 flex gap-1">${segHtml}</div>
+
+              <!-- 내역 -->
+              <div class="mt-3 rounded-lg bg-[#F3EAD9] px-3 py-2.5 space-y-1 text-xs">
+                <div class="flex justify-between">
+                  <span class="text-[#7A624D] font-semibold">매출 / 월급</span>
+                  <span class="mono-num font-bold">+${fmt(d.gross)} / <span class="text-[#B8523A]">-${fmt(d.wages)}</span></span>
+                </div>
+                <div class="flex justify-between items-baseline pt-1 border-t border-[#E2D3BC]">
+                  <span class="font-black">최종 수령액</span>
+                  <span class="mono-num text-xl font-black text-[#C86D44]">+${fmt(d.net)} G</span>
+                </div>
+              </div>
+
+              <!-- 블루아카이브식 직접 서명란 -->
+              <div class="mt-3">
+                <div class="flex items-center justify-between text-[11px] font-bold text-[#7A624D] mb-1">
+                  <span>사장님 결재 서명란</span>
+                  ${!stamped ? `
+                    <button onclick="autoSignClipboard('${canvasId}')" class="text-[10px] underline text-[#C86D44] font-extrabold hover:opacity-80">
+                      자동 서명 테스트
+                    </button>
+                  ` : `<span class="text-[#6F825A] font-black">결재 승인됨</span>`}
+                </div>
+
+                <div class="relative rounded-lg border-2 border-dashed ${stamped ? 'border-[#6F825A] bg-[#F2EFE4]' : 'border-[#B89872] bg-[#FFFDF8]'} overflow-hidden">
+                  ${stamped && state.signatureDataUrl
+                    ? `<img src="${state.signatureDataUrl}" alt="서명" class="block w-full h-[68px] object-contain" />`
+                    : `<canvas id="${canvasId}" data-sign-pad="true" width="268" height="68" class="sign-pad block w-full h-[68px]"></canvas>`
+                  }
+                  ${!stamped ? `
+                    <div id="${canvasId}-hint" class="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-bold text-[#C2AE93] select-none">
+                      여기에 마우스 / 손가락으로 서명하세요 ✍
+                    </div>
+                  ` : ''}
+
+                  <!-- 결재 완료 도장 -->
+                  ${stamped ? `
+                    <div class="animate-stamp absolute right-3 top-1.5 px-2.5 py-1 rounded border-[3px] border-[#C86D44] bg-[#FAF5EC] text-[#C86D44] text-xs font-black tracking-widest pointer-events-none">
+                      확인 완료
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 04. 웜 미니멀 카드 (단순 확인 버튼)
+    function renderMinimal(d) {
+      if (state.phase.minimal === 'done') return renderDismissedCard('minimal', d);
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto rounded-3xl bg-[#FAF5EC] border-2 border-[#E4D5BE] p-5 text-[#4A3728] flat-shadow-md">
+          <div class="flex items-center justify-between">
+            <span class="px-3 py-1 rounded-full bg-[#EFE4D2] text-[#7A624D] text-[11px] font-extrabold">다시 오셨군요!</span>
+            <span class="mono-num text-xs font-bold text-[#9C8268]">${d.countedText} / 5h</span>
+          </div>
+
+          <div class="mt-4 text-center py-4 rounded-2xl bg-[#F2E7D5]">
+            <div class="w-11 h-11 rounded-2xl bg-[#E3CFAF] text-[#4A3728] mx-auto flex items-center justify-center text-lg font-black mb-2">₩</div>
+            <div class="text-xs font-bold text-[#8A7058]">오프라인 수익</div>
+            <div class="mono-num text-4xl font-black tracking-tight text-[#4A3728] mt-1">
+              +${fmt(d.net)}<span class="text-lg font-extrabold text-[#C86D44] ml-1">G</span>
+            </div>
+            ${d.isCapped ? `
+              <div class="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-[#C86D44] text-[#FAF5EC] text-[10px] font-bold">
+                최대 보관 시간(5시간) 달성
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3.5 text-center">
+            <div class="rounded-xl bg-[#EFE4D2] py-2.5 px-1">
+              <div class="text-[10px] font-bold text-[#8A7058]">근무 알바</div>
+              <div class="text-xs font-black mt-0.5">${d.workers}명</div>
+            </div>
+            <div class="rounded-xl bg-[#EFE4D2] py-2.5 px-1">
+              <div class="text-[10px] font-bold text-[#8A7058]">번 돈</div>
+              <div class="mono-num text-xs font-black mt-0.5">+${fmt(d.gross)}</div>
+            </div>
+            <div class="rounded-xl bg-[#EFE4D2] py-2.5 px-1">
+              <div class="text-[10px] font-bold text-[#8A7058]">월급</div>
+              <div class="mono-num text-xs font-black text-[#B8523A] mt-0.5">-${fmt(d.wages)}</div>
+            </div>
+          </div>
+
+          <button onclick="onSimpleConfirm('minimal')"
+            class="btn-press mt-4 w-full py-3.5 rounded-2xl font-black text-sm bg-[#4A3728] text-[#FAF5EC] flat-shadow-dark">
+            확인
+          </button>
+        </div>
+      `;
+    }
+
+    // 05. 책상 위 포스트잇 메모 (단순 확인 버튼)
+    function renderMemo(d) {
+      if (state.phase.memo === 'done') return renderDismissedCard('memo', d);
+      return `
+        <div class="game-ui w-full max-w-[330px] mx-auto pt-4 relative">
+          <div class="w-24 h-6 bg-[#D9B88C] opacity-90 mx-auto -mb-3 relative z-10 rotate-[-2deg] rounded-sm"></div>
+          <div class="rounded-md bg-[#FBF2DC] border-2 border-[#DEC89F] px-5 pt-6 pb-5 text-[#4A3728] flat-shadow-md">
+            <div class="flex items-center justify-between border-b-2 border-[#E6D6BE] pb-2">
+              <span class="text-xs font-black text-[#9C7644]">MEMO · 부재중 기록</span>
+              <span class="mono-num text-[11px] font-bold text-[#9C7644]">${d.elapsedText}</span>
+            </div>
+
+            <div class="note-lines py-2 text-sm leading-8 font-bold text-[#5C4430]">
+              <div>사장님, 다녀오셨어요!</div>
+              <div>자리 비우신 동안 <span class="text-[#C86D44] font-black">알바 ${d.workers}명</span>이</div>
+              <div>열심히 상자를 날랐어요.</div>
+            </div>
+
+            <div class="mt-2 rounded-lg bg-[#F2E2BE] border border-[#DEC89F] p-3">
+              <div class="flex justify-between text-xs text-[#7A603E] font-semibold">
+                <span>매출 +${fmt(d.gross)} / 월급 -${fmt(d.wages)}</span>
+                <span class="mono-num">${d.pct}%</span>
+              </div>
+              <div class="mt-1.5 flex items-baseline justify-between">
+                <span class="text-xs font-black text-[#5C4430]">남겨둔 수익</span>
+                <span class="mono-num text-2xl font-black text-[#4A3728]">+${fmt(d.net)} G</span>
+              </div>
+            </div>
+
+            <button onclick="onSimpleConfirm('memo')"
+              class="btn-press mt-4 w-full py-3 rounded-lg font-black text-sm bg-[#D9824B] text-[#FAF5EC] flat-shadow-dark">
+              확인
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderConceptCard(id, d, suffix) {
+      switch (id) {
+        case 'waybill': return renderWaybill(d);
+        case 'envelope': return renderEnvelope(d);
+        case 'clipboard': return renderClipboard(d, suffix);
+        case 'minimal': return renderMinimal(d);
+        case 'memo': return renderMemo(d);
+      }
+    }
+
+    // 서명 캔버스 이벤트 바인딩
+    function bindSignaturePads() {
+      document.querySelectorAll('canvas[data-sign-pad="true"]').forEach(canvas => {
+        if (state.phase.clipboard !== 'idle') return;
+        const ctx = canvas.getContext('2d');
+        const hint = document.getElementById(`${canvas.id}-hint`);
+        let drawing = false;
+        let strokeDist = 0;
+        let lastX = 0, lastY = 0;
+
+        function getPos(e) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+          };
+        }
+
+        canvas.addEventListener('pointerdown', e => {
+          if (state.phase.clipboard !== 'idle') return;
+          canvas.setPointerCapture(e.pointerId);
+          drawing = true;
+          if (hint) hint.style.display = 'none';
+          const pos = getPos(e);
+          lastX = pos.x;
+          lastY = pos.y;
+          ctx.strokeStyle = '#4A3728';
+          ctx.lineWidth = 3;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        });
+
+        canvas.addEventListener('pointermove', e => {
+          if (!drawing) return;
+          const pos = getPos(e);
+          strokeDist += Math.hypot(pos.x - lastX, pos.y - lastY);
+          lastX = pos.x;
+          lastY = pos.y;
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        });
+
+        function finishStroke() {
+          if (!drawing) return;
+          drawing = false;
+          // 일정 길이 이상 서명했으면 블루아카이브처럼 바로 결재 도장 쾅!
+          if (strokeDist >= 35) {
+            onClipboardSigned(canvas);
+          }
+        }
+
+        canvas.addEventListener('pointerup', finishStroke);
+        canvas.addEventListener('pointercancel', finishStroke);
+      });
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      render();
+    }
+
+    function setActiveConcept(id) {
+      state.activeId = id;
+      render();
+    }
+
+    function render() {
+      const d = calcOffline();
+
+      document.getElementById('lblElapsed').textContent = d.elapsedText;
+      document.getElementById('lblWorkers').textContent = `${d.workers}명`;
+      document.getElementById('lblCapBadge').textContent = d.isCapped ? '(상한 5시간 적용)' : `(${d.pct}%)`;
+      document.getElementById('lblSummary').textContent = `+${fmt(d.gross)} − ${fmt(d.wages)} = +${fmt(d.net)} G`;
+
+      const btnSingle = document.getElementById('btnViewSingle');
+      const btnGrid = document.getElementById('btnViewGrid');
+      if (state.viewMode === 'single') {
+        btnSingle.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] border border-transparent';
+        btnGrid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-transparent text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--background)]';
+      } else {
+        btnGrid.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] border border-transparent';
+        btnSingle.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-transparent text-[var(--foreground)] border border-[var(--border)] hover:bg-[var(--background)]';
+      }
+
+      const tabsEl = document.getElementById('conceptTabs');
+      if (state.viewMode === 'single') {
+        tabsEl.style.display = 'flex';
+        tabsEl.innerHTML = CONCEPTS.map(c => {
+          const active = c.id === state.activeId;
+          return `
+            <button onclick="setActiveConcept('${c.id}')"
+              class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                active
+                  ? 'bg-[var(--primary)] text-[var(--primary-foreground)] border-transparent'
+                  : 'bg-[var(--background)] text-[var(--foreground)] border-[var(--border)] hover:opacity-80'
+              }">
+              ${c.num}. ${c.name}
+            </button>
+          `;
+        }).join('');
+      } else {
+        tabsEl.style.display = 'none';
+      }
+
+      const stage = document.getElementById('stage');
+      if (state.viewMode === 'single') {
+        const c = CONCEPTS.find(x => x.id === state.activeId);
+        stage.innerHTML = `
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- 모바일 프리뷰 -->
+            <div class="lg:col-span-7 flex justify-center">
+              <div class="w-full max-w-[390px] rounded-[36px] border-[8px] border-[#3B2E24] overflow-hidden shadow-xl relative"
+                   style="background:#8E7D6A; min-height: 620px;">
+                <!-- 인게임 상단 HUD (실제 지갑 잔액 상승 확인) -->
+                <div class="p-4 flex justify-between items-center relative z-30">
+                  <div class="px-3 py-1 rounded-full bg-[#FAF5EC] text-[#4A3728] text-xs font-black border border-[#C7B293]">1파트 하차 · 02:45</div>
+                  <div class="px-3 py-1 rounded-full bg-[#FAF5EC] text-[#4A3728] text-xs font-black mono-num border border-[#C7B293]">
+                    ${fmt(state.walletGold)} G
+                  </div>
+                </div>
+
+                <!-- 토스트 피드백 -->
+                ${state.toastText ? `
+                  <div class="animate-float-toast absolute top-14 right-4 z-40 px-3 py-1.5 rounded-full bg-[#6F825A] text-[#FAF5EC] text-xs font-black shadow">
+                    ${state.toastText}
+                  </div>
+                ` : ''}
+
+                <!-- 딤 배경 + 팝업 -->
+                <div class="absolute inset-0 flex items-center justify-center p-5 pt-14" style="background: rgba(45, 33, 24, 0.56);">
+                  ${renderConceptCard(c.id, d, 'single')}
+                </div>
+              </div>
+            </div>
+
+            <!-- 우측 컨셉 설명 -->
+            <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-xl p-5 space-y-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-[var(--background)] border border-[var(--border)] text-xs font-bold mono-num">CONCEPT ${c.num}</span>
+                <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background:#EFE4D2; color:#4A3728;">${c.tag}</span>
+              </div>
+              <h2 class="text-xl font-bold">${c.name}</h2>
+              <div class="rounded-lg bg-[var(--background)] border border-[var(--border)] p-3 text-xs leading-relaxed">
+                <span class="font-bold text-[var(--primary)]">▶ 체험 방법:</span> ${c.actionHint}
+              </div>
+              <p class="text-sm text-[var(--muted-foreground)] leading-relaxed">${c.desc}</p>
+
+              <div class="pt-3 border-t border-[var(--border)] flex items-center justify-between">
+                <span class="text-xs text-[var(--muted-foreground)]">현재 연출 단계: <code class="px-1.5 py-0.5 rounded bg-[var(--background)] font-bold">${state.phase[c.id]}</code></span>
+                <button onclick="resetConcept('${c.id}')"
+                  class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--background)] border border-[var(--border)] hover:opacity-80">
+                  이 컨셉 다시 보기
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        stage.innerHTML = `
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            ${CONCEPTS.map(c => `
+              <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden flex flex-col">
+                <div class="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between gap-2">
+                  <div>
+                    <div class="text-xs font-bold">${c.num}. ${c.name}</div>
+                    <div class="text-[11px] text-[var(--muted-foreground)]">${c.tag}</div>
+                  </div>
+                  <div class="flex gap-1.5">
+                    <button onclick="resetConcept('${c.id}')"
+                      class="px-2 py-1 rounded-md text-[11px] font-semibold bg-[var(--background)] border border-[var(--border)] hover:opacity-80">
+                      리셋
+                    </button>
+                    <button onclick="state.activeId='${c.id}'; setViewMode('single');"
+                      class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-[var(--background)] border border-[var(--border)] hover:opacity-80">
+                      크게
+                    </button>
+                  </div>
+                </div>
+                <div class="p-5 flex-1 flex items-center justify-center min-h-[420px]" style="background: #6E5D4E;">
+                  ${renderConceptCard(c.id, d, 'grid-' + c.id)}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      bindSignaturePads();
+    }
+
+    document.getElementById('rangeMinutes').addEventListener('input', e => {
+      state.elapsedMinutes = parseInt(e.target.value, 10);
+      render();
+    });
+    document.getElementById('rangeWorkers').addEventListener('input', e => {
+      state.workers = parseInt(e.target.value, 10);
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
