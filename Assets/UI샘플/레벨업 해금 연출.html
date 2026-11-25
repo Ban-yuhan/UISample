@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>레벨업 해금 연출</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 캐주얼 모바일 게임, 통통 튀는 보상 연출
+   IDEA: 자물쇠가 열쇠로 풀리며 새 건물이 해금되는 레벨업 배너
+   PICTURE: 게임 화면 위에 뜨는 크림색 배너 + 자물쇠 뱃지 + 별 파티클
+   COLOUR and TYPE: 영상 색 그대로(크림 #FEE4A0, 갈색 #BF7B33, 오렌지 #CD6100), Jua
+   LAYOUT: 상단 스테이지(재생), 아래 컨트롤과 유니티 이식용 타임라인 표 */
+:root{color-scheme:light dark;--bg:light-dark(#f4efe4,#1b1712);--ink:light-dark(#2b1a06,#f3e6cc);--mut:light-dark(#7a6548,#b9a483);--line:light-dark(#e1d4bb,#3a3125);--card:light-dark(#fffaf0,#241e17)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Gothic A1",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,40px) max(4vw,16px);max-width:1100px;margin:0 auto}
+h1{font:400 clamp(28px,4vw,40px)/1.05 Jua,sans-serif;margin:0 0 6px}
+.sub{color:var(--mut);margin:0 0 18px;font-size:15px}
+/* stage: 게임 화면 느낌 */
+.stage{position:relative;height:clamp(340px,52vw,460px)}
+.popup{position:absolute;left:50%;top:54%;width:min(560px,88%);transform:translate(-50%,-50%);z-index:2;opacity:0}
+.banner{position:relative;border-radius:14px;background:#FEE4A0;
+ box-shadow:0 0 0 3px #BF7B33,0 0 0 6px #FFF9D7,0 10px 24px rgba(0,0,0,.35);overflow:hidden;
+ padding:70px 20px 22px;text-align:center}
+.banner::before{content:"";position:absolute;left:0;right:0;top:0;height:22px;background:#E4B268;border-bottom:2px solid #D9A257}
+.title{font:400 clamp(34px,6vw,50px)/1 Jua,sans-serif;color:#5a2d00;letter-spacing:.5px;opacity:0;display:inline-block}
+.title b{font-weight:400;color:#CD6100}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;margin-top:12px}
+.chip{font:700 14px/1 "Gothic A1",sans-serif;color:#5a2d00;background:#fff3cf;border:2px solid #BF7B33;border-radius:999px;padding:7px 12px;opacity:0}
+.chip.lbl{background:#CD6100;color:#fff;border-color:#8a3f00}
+.badge{position:absolute;left:50%;top:0;width:112px;height:112px;transform:translate(-50%,-50%);z-index:3}
+.badge svg{width:100%;height:100%;overflow:visible;display:block}
+.fx{position:absolute;left:50%;top:12px;width:0;height:0;z-index:4;pointer-events:none}
+.ring{position:absolute;left:-56px;top:-68px;width:112px;height:112px;border-radius:50%;border:4px solid #fff;opacity:0}
+.p{position:absolute;left:0;top:0;opacity:0}
+.p svg{display:block;width:100%;height:100%}
+#kOut *,#kFront *{vector-effect:non-scaling-stroke}
+/* controls */
+.ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 26px}
+button,select{font:700 16px "Gothic A1",sans-serif;min-height:44px;border-radius:12px;border:2px solid #BF7B33;background:#FEE4A0;color:#5a2d00;padding:0 18px;cursor:pointer}
+button.pri{background:#CD6100;color:#fff;border-color:#8a3f00}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid #CD6100;outline-offset:2px}
+label{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--mut)}
+input[type=checkbox]{width:20px;height:20px;accent-color:#CD6100}
+h2{font:400 24px/1.1 Jua,sans-serif;margin:0 0 10px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:15px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--mut);font-size:13px}
+td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.note{color:var(--mut);font-size:14px;margin-top:10px}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--mut)}
+ .banner{padding-top:62px}.chip{font-size:13px}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<div class="band">
+ <h1>레벨업 해금 연출</h1>
+ <p class="sub">배너 등장 → 열쇠가 올라와 꽂힘 → 돌려서 자물쇠 열림 → 링·별 버스트 → 텍스트/해금 목록 등장 → 위로 떠오르며 사라짐</p>
+
+ <div class="stage" id="stage">
+  <div class="popup" id="popup">
+   <div class="banner">
+    <div class="title" id="title">LEVEL UP! <b id="lv">Lv.5</b></div>
+    <div class="chips" id="chips"></div>
+   </div>
+   <div class="badge">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+     <g id="badgeG" style="transform-origin:50px 50px">
+      <circle cx="50" cy="50" r="47" fill="#CD6100" stroke="#1a0d00" stroke-width="2.5"/>
+      <circle cx="50" cy="50" r="40" fill="#3B2000" stroke="#1a0d00" stroke-width="1.5"/>
+      <g id="lockG" style="transform-origin:50px 62px">
+      <g id="shackle" style="transform-origin:62px 54px">
+       <path d="M38 50V38a12 12 0 0 1 24 0V72" fill="none" stroke="#000" stroke-width="10" stroke-linecap="round"/>
+       <path d="M38 50V38a12 12 0 0 1 24 0V72" fill="none" stroke="#FEF3E4" stroke-width="5" stroke-linecap="round"/>
+      </g>
+      <g id="keyPos" style="transform-origin:0 0">
+       <g id="keyTurn" style="transform-origin:0 0"><g>
+        <defs><linearGradient id="kSide" x1="0" x2="1"><stop offset="0" stop-color="#d4d4d4"/><stop offset=".5" stop-color="#bdbdbd"/><stop offset="1" stop-color="#8f8f8f"/></linearGradient></defs>
+        <g id="kOut" fill="#000" stroke="#000" stroke-width="4" stroke-linejoin="round" style="vector-effect:non-scaling-stroke"></g>
+        <g id="kSideG" fill="url(#kSide)"></g>
+        <g id="kFront" stroke="#000" stroke-width="1.8" stroke-linejoin="round"></g>
+       </g></g>
+      </g>
+      <rect x="30" y="46" width="40" height="29" rx="3.5" fill="#FEF3E4" stroke="#000" stroke-width="2.6"/>
+      <rect x="31.5" y="47.5" width="37" height="5" rx="2" fill="#fff" opacity=".7"/>
+      </g>
+     </g>
+    </svg>
+   </div>
+   <div class="fx" id="fx"><div class="ring" id="ring1"></div><div class="ring" id="ring2"></div></div>
+  </div>
+ </div>
+
+ <div class="ctl">
+  <button class="pri" id="play">▶ 다시 재생</button>
+  <label for="speed">속도
+   <select id="speed"><option value="0.25">0.25x</option><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option></select>
+  </label>
+  <label><input type="checkbox" id="loop" checked> 반복</label>
+ </div>
+
+ <h2>타임라인 (1x 기준, 유니티 이식용)</h2>
+ <div class="scroll">
+ <table class="stack">
+  <thead><tr><th>시작</th><th>길이</th><th>대상</th><th>동작</th><th>이징</th></tr></thead>
+  <tbody id="tl"></tbody>
+ </table>
+ </div>
+ <p class="note">원본 영상(2.7초)의 열쇠→해금→별 버스트 구간을 그대로 옮기고, 앞에 배너 팝인, 뒤에 텍스트 등장과 위로 떠오르며 사라지는 퇴장을 붙였습니다. DOTween이면 Sequence 하나에 위 행을 Insert(시작, 트윈)로 넣으면 됩니다.</p>
+</div>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const items=['상차 3','A보관 2','롤테이너','스테미너 3'];
+$('chips').innerHTML='<span class="chip lbl">건설</span>'+items.map(t=>`<span class="chip">${t}</span>`).join('');
+
+const E={out:'cubic-bezier(.22,1,.36,1)',back:'cubic-bezier(.34,1.56,.64,1)',in:'cubic-bezier(.55,0,1,.45)',io:'cubic-bezier(.65,0,.35,1)'};
+const T=[ // [start, dur, target, desc, ease]
+ [0,320,'배너 전체','scale 0.7→1.06→1, alpha 0→1','OutBack'],
+ [200,450,'열쇠','아래(y+64)에서 열쇠구멍까지 상승, alpha 0→1','OutQuart'],
+ [650,130,'열쇠','안쪽으로 4px 더 밀어넣기','OutQuad'],
+ [800,300,'자물쇠(고리+몸통+꽂힌 열쇠)','흔들 1~2회: 몸통 중심 축으로 0→−7°→+6°→−2°→0','InOutSine'],
+ [1130,220,'열쇠','90° 돌리기: 앞면 폭 cosθ로 줄고 옆면(두께) 폭이 두께×sinθ로 늘어남, 원형 손잡이가 몸통보다 두꺼움 → 끝엔 두께만 보이는 막대','InOutCubic'],
+ [1280,160,'자물쇠 고리','위로 13px 뽑힘 (왼쪽 짧은 다리만 빠지고, 오른쪽 긴 다리는 몸통에 끼워진 채 유지)','OutBack'],
+ [1400,240,'뱃지','펀치 scale 1→1.22→1, 밝기 플래시','OutBack'],
+ [1400,190,'열쇠','alpha 1→0','Linear'],
+ [1400,480,'링 x2','scale 1→1.75, alpha 0.9→0 (두 번째 링 60ms 지연)','OutQuad'],
+ [1400,1100,'별 파티클 ~26개','터지기 전엔 숨김, 자물쇠 몸통 중심에서 바깥으로 퍼짐 + 회전 + 살짝 낙하, 끝에서 fade','OutCubic'],
+ [1460,360,'LEVEL UP 텍스트','scale 1.6→0.95→1, alpha 0→1','OutBack'],
+ [1640,300,'해금 칩','70ms 간격 순차, y+12→0, alpha 0→1','OutBack'],
+ [3940,420,'배너 전체','y −50px 떠오르며 alpha 1→0','InQuad'],
+];
+$('tl').innerHTML=T.map(r=>`<tr><td class="n">${r[0]}ms</td><td class="n">${r[1]}ms</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('');
+
+const star=(c)=>`<svg viewBox="-12 -12 24 24"><path d="M0-10 2.9-3.6 9.5-3.1 4.5 1.3 6 8 0 4.5-6 8-4.5 1.3-9.5-3.1-2.9-3.6Z" fill="${c}" stroke="#4a2a00" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+const dot=(c)=>`<svg viewBox="-6 -6 12 12"><circle r="4" fill="none" stroke="${c}" stroke-width="1.8"/></svg>`;
+let anims=[],timer=0;
+
+function A(el,kf,start,dur,ease,sp,fill='both'){
+ const a=el.animate(kf,{delay:start/sp,duration:dur/sp,easing:ease,fill});anims.push(a);return a;
+}
+let clock=null;
+const D=340; // 부들부들 구간 길이
+const KS=5.5,KB=10; // 두께: 몸통(샤프트), 손잡이(머리)
+const ease=x=>x<.5?4*x*x*x:1-((-2*x+2)**3)/2;
+// 열쇠: 뾰족한 끝 + 왼쪽에 파인 톱니 2개 + 원형 손잡이(아래쪽 작은 구멍)
+const SHAFT='M-4 5L0 0L4 5V50H-4V36L-0.8 32.5L-4 29V22L-0.8 18.5L-4 15Z';
+const BOW=(rx)=>{rx=Math.max(rx,.001);return `M${-rx} 62a${rx} 14 0 1 0 ${2*rx} 0a${rx} 14 0 1 0 ${-2*rx} 0Z`};
+function drawKey(th){
+ const c=Math.max(Math.cos(th),0),sn=Math.sin(th);
+ const os=KS*sn,ob=KB*sn,sw=4*c,rx=14*c;
+ const sp_=(x)=>`<path d="${SHAFT}" transform="translate(${x} 0) scale(${Math.max(c,.001)} 1)"/>`;
+ const ext=sp_(-os/2)+sp_(os/2)+(os>.05?`<rect x="${-os/2}" y="2" width="${os}" height="48"/>`:'')+
+  `<path d="${BOW(rx)}" transform="translate(${-ob/2} 0)"/><path d="${BOW(rx)}" transform="translate(${ob/2} 0)"/>`+
+  (ob>.05?`<rect x="${-ob/2}" y="48" width="${ob}" height="28" rx="${Math.min(ob/2,4)}"/>`:'');
+ $('kOut').innerHTML=ext;$('kSideG').innerHTML=ext;
+ const g=Math.round(255-45*sn),col=`rgb(${g},${g},${g})`;
+ $('kFront').innerHTML=c<.04?'':
+  `<path d="${SHAFT}" transform="translate(${-os/2} 0) scale(${c} 1)" fill="${col}" vector-effect="non-scaling-stroke"/>`+
+  `<g transform="translate(${-ob/2} 0)"><path d="${BOW(rx)}" fill="${col}"/>`+
+  `<ellipse cx="0" cy="67" rx="${3.4*c}" ry="3.6" fill="#3B2000"/></g>`;
+}
+function tick(){
+ if(clock){const t=(clock.currentTime||0)*(+$('speed').value);
+  const p=Math.min(1,Math.max(0,(t-790-D)/220));drawKey(ease(p)*Math.PI/2);}
+ requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+function play(){
+ const sp=+$('speed').value;
+ anims.forEach(a=>a.cancel());anims=[];clearTimeout(timer);
+ $('fx').querySelectorAll('.p').forEach(n=>n.remove());
+ const popup=$('popup'),key=$('keyPos');
+ A(popup,[{opacity:0,transform:'translate(-50%,-50%) scale(.7)'},{opacity:1,transform:'translate(-50%,-50%) scale(1.06)',offset:.7},{opacity:1,transform:'translate(-50%,-50%) scale(1)'}],0,320,E.out,sp);
+ A(key,[{transform:'translate(50px,120px)',opacity:0},{transform:'translate(50px,56px)',opacity:1}],200,450,E.out,sp);
+ A(key,[{transform:'translate(50px,56px)'},{transform:'translate(50px,52px)'}],650,130,E.out,sp,'forwards');
+ clock=A(document.body,[{'--k':0},{'--k':1}],0,6000,'linear',sp,'none');drawKey(0);
+ // 흔들: 자물쇠가 한 번 버티듯 1~2회 흔들림, 꽂힌 열쇠도 같이 흔들림
+ A($('lockG'),[{transform:'rotate(0deg)'},{transform:'rotate(-7deg)',offset:.25},{transform:'rotate(6deg)',offset:.55},{transform:'rotate(-2deg)',offset:.8},{transform:'rotate(0deg)'}],800,300,'ease-in-out',sp,'none');
+
+ A(key,[{opacity:1},{opacity:0}],1060+D,190,'linear',sp,'forwards');
+ A($('shackle'),[{transform:'translateY(0)'},{transform:'translateY(-13px)'}],940+D,160,E.back,sp);
+ A($('badgeG'),[{transform:'scale(1)',filter:'brightness(1)'},{transform:'scale(1.22)',filter:'brightness(1.6)',offset:.35},{transform:'scale(1)',filter:'brightness(1)'}],1060+D,240,E.out,sp);
+ [['ring1',0],['ring2',60]].forEach(([id,d])=>A($(id),[{opacity:.9,transform:'scale(1)',borderWidth:'5px'},{opacity:0,transform:'scale(1.75)',borderWidth:'1px'}],1060+D+d,480,E.out,sp,'forwards'));
+ // particles
+ const cols=['#ffffff','#FFD54A','#F7A531','#ffffff','#FFE58A'];
+ for(let i=0;i<26;i++){
+  const n=document.createElement('div');n.className='p';
+  const isDot=i>=20,s=isDot?9+Math.random()*5:13+Math.random()*11;
+  n.style.width=n.style.height=s+'px';n.style.marginLeft=n.style.marginTop=(-s/2)+'px';
+  n.innerHTML=isDot?dot(cols[i%cols.length]==='#ffffff'?'#fff':'#F7A531'):star(cols[i%cols.length]);
+  $('fx').appendChild(n);
+  const ang=(i/26)*Math.PI*2+Math.random()*.4,r0=36,r=85+Math.random()*80;
+  const x0=Math.cos(ang)*r0,y0=Math.sin(ang)*r0*.6,x1=Math.cos(ang)*r,y1=Math.sin(ang)*r*.85;
+  const rot=(Math.random()<.5?-1:1)*(120+Math.random()*240),dl=Math.random()*60,du=900+Math.random()*350;
+  A(n,[{opacity:0,transform:`translate(${x0}px,${y0}px) scale(.2) rotate(0deg)`},
+       {opacity:1,transform:`translate(${x0*1.4}px,${y0*1.4}px) scale(.5) rotate(${rot*.1}deg)`,offset:.06},
+       {opacity:1,transform:`translate(${x1*.8}px,${y1*.8}px) scale(1.1) rotate(${rot*.6}deg)`,offset:.35},
+       {opacity:.9,transform:`translate(${x1}px,${y1+10}px) scale(1) rotate(${rot*.85}deg)`,offset:.7},
+       {opacity:0,transform:`translate(${x1*1.03}px,${y1+26}px) scale(.6) rotate(${rot}deg)`}],1060+D+dl,du,E.out,sp,'forwards');
+ }
+ A($('title'),[{opacity:0,transform:'scale(1.6)'},{opacity:1,transform:'scale(.95)',offset:.6},{opacity:1,transform:'scale(1)'}],1120+D,360,E.out,sp);
+ [...$('chips').children].forEach((c,i)=>A(c,[{opacity:0,transform:'translateY(12px) scale(.8)'},{opacity:1,transform:'none'}],1300+D+i*70,300,E.back,sp));
+ A(popup,[{opacity:1,transform:'translate(-50%,-50%)'},{opacity:0,transform:'translate(-50%,calc(-50% - 50px))'}],3600+D,420,E.in,sp,'forwards');
+ timer=setTimeout(()=>{if($('loop').checked)play()},(4020+D+700)/sp);
+}
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+$('play').addEventListener('click',play);
+$('speed').addEventListener('change',play);
+$('loop').addEventListener('change',()=>{if($('loop').checked)play()});
+if(reduced){$('loop').checked=false}
+play();
+}
+</script>
+</body>
+</html>
